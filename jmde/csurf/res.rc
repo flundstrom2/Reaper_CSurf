@@ -7,7 +7,16 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
+
+// afxres.h is not included in Visual Studio 2008 Express Edition,
+// but can - if project doesn't use MFC - be replaced with windows.h or winres.h according to
+// http://stackoverflow.com/questions/3566018/cannot-open-include-file-afxres-h-in-vc2010-express
+// winres.h also defines IDC_STATIC which is also needed by this project.
+// If winres.h can't be found, IDC_STATIC can be defined -1.
+
+//#include "afxres.h"
+#include "windows.h"
+#define IDC_STATIC -1
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
