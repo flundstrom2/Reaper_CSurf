@@ -1,2 +1,4 @@
 /jmde/csurf/Debug
 /jmde/Debug/Plugins
+/jmde/csurf/*.ncb
+/jmde/csurf/*.suo
