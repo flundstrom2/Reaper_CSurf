@@ -1,7 +1,8 @@
 /*
-** reaper_csurf
-** MCU support
-** Copyright (C) 2006-2008 Cockos Incorporated
+** reaper_csuf
+** Samson Graphite MF8 support (Based on MCU implementation)
+** Copyright (C) 2006-2015 Cockos Incorporated
+** Author: Fredrik Lundström
 ** License: LGPL.
 */
 
@@ -191,13 +192,13 @@ static unsigned int get_midi_evt_code( MIDI_event_t *evt ) {
 }
 */
 
-class CSurf_MCU;
-static WDL_PtrList<CSurf_MCU> m_mcu_list;
+class CSurf_MF8;
+static WDL_PtrList<CSurf_MF8> m_mf8_list;
 static bool g_csurf_mcpmode;
 static int m_flipmode;
-static int m_allmcus_bank_offset;
+static int m_allmf8s_bank_offset;
 
-typedef void (CSurf_MCU::*ScheduleFunc)();
+typedef void (CSurf_MF8::*ScheduleFunc)();
 
 struct ScheduledAction {
   ScheduledAction( DWORD time, ScheduleFunc func ) {
@@ -259,9 +260,9 @@ struct SelectedTrack {
   GUID guid;
 };
 
-class CSurf_MCU : public IReaperControlSurface
+class CSurf_MF8 : public IReaperControlSurface
 {
-    bool m_is_mcuex;
+    bool m_is_mf8ex;
     int m_midi_in_dev,m_midi_out_dev;
     int m_offset, m_size;
     midi_Output *m_midiout;
@@ -281,8 +282,8 @@ class CSurf_MCU : public IReaperControlSurface
     WDL_String m_descspace;
     char m_configtmp[1024];
 
-    double m_mcu_meterpos[8];
-    DWORD m_mcu_timedisp_lastforce, m_mcu_meter_lastrun;
+    double m_mf8_meterpos[8];
+    DWORD m_mf8_timedisp_lastforce, m_mf8_meter_lastrun;
     int m_mackie_arrow_states;
     unsigned int m_buttonstate_lastrun;
     unsigned int m_frameupd_lastrun;
@@ -316,7 +317,7 @@ class CSurf_MCU : public IReaperControlSurface
       }
     }
     
-    void MCUReset()
+    void MF8Reset()
     {
       memset(m_mackie_lasttime,0,sizeof(m_mackie_lasttime));
       memset(m_fader_touchstate,0,sizeof(m_fader_touchstate));
@@ -333,7 +334,7 @@ class CSurf_MCU : public IReaperControlSurface
 
       if (m_midiout)
       {
-        if (!m_is_mcuex)
+        if (!m_is_mf8ex)
         {
           m_midiout->Send(0x90, 0x32,m_flipmode?1:0,-1);
           m_midiout->Send(0x90, 0x33,g_csurf_mcpmode?0x7f:0,-1);
@@ -341,8 +342,8 @@ class CSurf_MCU : public IReaperControlSurface
           m_midiout->Send(0x90, 0x64,(m_mackie_arrow_states&64)?0x7f:0,-1);
           m_midiout->Send(0x90, 0x65,(m_mackie_arrow_states&128)?0x7f:0,-1);
 
-          m_midiout->Send(0xB0,0x40+11,'0'+(((m_allmcus_bank_offset+1)/10)%10),-1);
-          m_midiout->Send(0xB0,0x40+10,'0'+((m_allmcus_bank_offset+1)%10),-1);
+          m_midiout->Send(0xB0,0x40+11,'0'+(((m_allmf8s_bank_offset+1)/10)%10),-1);
+          m_midiout->Send(0xB0,0x40+10,'0'+((m_allmf8s_bank_offset+1)%10),-1);
         }
 
         UpdateMackieDisplay(0,SPLASH_MESSAGE,56*2);
@@ -362,7 +363,7 @@ class CSurf_MCU : public IReaperControlSurface
           poo.evt.midi_message[1]=0x00;
           poo.evt.midi_message[2]=0x00;
           poo.evt.midi_message[3]=0x66;
-          poo.evt.midi_message[4]=m_is_mcuex ? 0x15 : 0x14;
+          poo.evt.midi_message[4]=m_is_mf8ex ? 0x15 : 0x14;
           poo.evt.midi_message[5]=0x20;
           poo.evt.midi_message[6]=0x00+x;
           poo.evt.midi_message[7]=0x03;
@@ -394,7 +395,7 @@ class CSurf_MCU : public IReaperControlSurface
       poo.evt.midi_message[poo.evt.size++]=0x00;
       poo.evt.midi_message[poo.evt.size++]=0x00;
       poo.evt.midi_message[poo.evt.size++]=0x66;
-      poo.evt.midi_message[poo.evt.size++]=m_is_mcuex ? 0x15 :  0x14;
+      poo.evt.midi_message[poo.evt.size++]=m_is_mf8ex ? 0x15 :  0x14;
       poo.evt.midi_message[poo.evt.size++]=0x12;
 
       poo.evt.midi_message[poo.evt.size++]=pos;
@@ -414,15 +415,15 @@ class CSurf_MCU : public IReaperControlSurface
       m_midiout->SendMsg(&poo.evt,-1);
     }
 
-    typedef bool (CSurf_MCU::*MidiHandlerFunc)(MIDI_event_t*);
+    typedef bool (CSurf_MF8::*MidiHandlerFunc)(MIDI_event_t*);
     
-    bool OnMCUReset(MIDI_event_t *evt) {
+    bool OnMF8Reset(MIDI_event_t *evt) {
       unsigned char onResetMsg[]={0xf0,0x00,0x00,0x66,0x14,0x01,0x58,0x59,0x5a,};
-      onResetMsg[4]=m_is_mcuex ? 0x15 : 0x14; 
+      onResetMsg[4]=m_is_mf8ex ? 0x15 : 0x14; 
       if (evt->midi_message[0]==0xf0 && evt->size >= sizeof(onResetMsg) && !memcmp(evt->midi_message,onResetMsg,sizeof(onResetMsg)))
       {
         // on reset
-        MCUReset();
+        MF8Reset();
         TrackList_UpdateAllExternalSurfaces();
         return true;
       }
@@ -439,7 +440,7 @@ class CSurf_MCU : public IReaperControlSurface
           m_fader_lasttouch[tid]=m_fader_lastmove;
 
         if (tid == 8) tid=0; // master offset, master=0
-        else tid+= 1+m_offset+m_allmcus_bank_offset;
+        else tid+= 1+m_offset+m_allmf8s_bank_offset;
 
         MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
 
@@ -470,7 +471,7 @@ class CSurf_MCU : public IReaperControlSurface
 	    m_pan_lasttouch[tid&7]=timeGetTime();
 
 	    if (tid == 8) tid=0; // adjust for master
-	    else tid+=1+m_offset+m_allmcus_bank_offset;
+	    else tid+=1+m_offset+m_allmf8s_bank_offset;
 	    MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
 	    if (tr)
 	    {
@@ -526,9 +527,9 @@ class CSurf_MCU : public IReaperControlSurface
 	  int maxfaderpos=0;
 	  int movesize=8;
 	  int x;
-	  for (x = 0; x < m_mcu_list.GetSize(); x ++)
+	  for (x = 0; x < m_mf8_list.GetSize(); x ++)
 	  {
-	    CSurf_MCU *item=m_mcu_list.Get(x);
+	    CSurf_MF8 *item=m_mf8_list.Get(x);
 	    if (item)
 	    {
 	      if (item->m_offset+8 > maxfaderpos)
@@ -545,28 +546,28 @@ class CSurf_MCU : public IReaperControlSurface
 	    int msize=CSurf_NumTracks(g_csurf_mcpmode);
 	    if (movesize>1)
 	    {
-	      if (m_allmcus_bank_offset+maxfaderpos >= msize) return true;
+	      if (m_allmf8s_bank_offset+maxfaderpos >= msize) return true;
 	    }
 
-	    m_allmcus_bank_offset+=movesize;
+	    m_allmf8s_bank_offset+=movesize;
 
-	    if (m_allmcus_bank_offset >= msize) m_allmcus_bank_offset=msize-1;
+	    if (m_allmf8s_bank_offset >= msize) m_allmf8s_bank_offset=msize-1;
 	  }
 	  else
 	  {
-	    m_allmcus_bank_offset-=movesize;
-	    if (m_allmcus_bank_offset<0)m_allmcus_bank_offset=0;
+	    m_allmf8s_bank_offset-=movesize;
+	    if (m_allmf8s_bank_offset<0)m_allmf8s_bank_offset=0;
 	  }
 	  // update all of the sliders
 	  TrackList_UpdateAllExternalSurfaces();
 
-	  for (x = 0; x < m_mcu_list.GetSize(); x ++)
+	  for (x = 0; x < m_mf8_list.GetSize(); x ++)
 	  {
-	    CSurf_MCU *item=m_mcu_list.Get(x);
-	    if (item && !item->m_is_mcuex && item->m_midiout)
+	    CSurf_MF8 *item=m_mf8_list.Get(x);
+	    if (item && !item->m_is_mf8ex && item->m_midiout)
 	    {
-	      item->m_midiout->Send(0xB0,0x40+11,'0'+(((m_allmcus_bank_offset+1)/10)%10),-1);
-	      item->m_midiout->Send(0xB0,0x40+10,'0'+((m_allmcus_bank_offset+1)%10),-1);
+	      item->m_midiout->Send(0xB0,0x40+11,'0'+(((m_allmf8s_bank_offset+1)/10)%10),-1);
+	      item->m_midiout->Send(0xB0,0x40+10,'0'+((m_allmf8s_bank_offset+1)%10),-1);
 	    }
 	  }
 	  return true;
@@ -601,7 +602,7 @@ class CSurf_MCU : public IReaperControlSurface
 	  int trackid=evt->midi_message[1]-0x20;
 	  m_pan_lasttouch[trackid]=timeGetTime();
 
-	  trackid+=1+m_allmcus_bank_offset+m_offset;
+	  trackid+=1+m_allmf8s_bank_offset+m_offset;
 
 
 	  MediaTrack *tr=CSurf_TrackFromID(trackid,g_csurf_mcpmode);
@@ -621,7 +622,7 @@ class CSurf_MCU : public IReaperControlSurface
 	
 	bool OnRecArm( MIDI_event_t *evt ) {
 	  int tid=evt->midi_message[1];
-	  tid+=1+m_allmcus_bank_offset+m_offset;
+	  tid+=1+m_allmf8s_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
 	  if (tr)
 	    CSurf_OnRecArmChange(tr,-1);
@@ -632,7 +633,7 @@ class CSurf_MCU : public IReaperControlSurface
 	  int tid=evt->midi_message[1]-0x08;
 	  int ismute=(tid&8);
 	  tid&=7;
-	  tid+=1+m_allmcus_bank_offset+m_offset;
+	  tid+=1+m_allmf8s_bank_offset+m_offset;
 
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
 	  if (tr)
@@ -647,7 +648,7 @@ class CSurf_MCU : public IReaperControlSurface
 	
 	bool OnSoloDC( MIDI_event_t *evt ) {
 	  int tid=evt->midi_message[1]-0x08;
-	  tid+=1+m_allmcus_bank_offset+m_offset;
+	  tid+=1+m_allmf8s_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
 	  SoloAllTracks(0);
 	  CSurf_SetSurfaceSolo(tr,CSurf_OnSoloChange(tr,1),NULL);
@@ -657,7 +658,7 @@ class CSurf_MCU : public IReaperControlSurface
 	bool OnChannelSelect( MIDI_event_t *evt ) {
 	  int tid=evt->midi_message[1]-0x18;
 	  tid&=7;
-	  tid+=1+m_allmcus_bank_offset+m_offset;
+	  tid+=1+m_allmf8s_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
 	  if (tr) CSurf_OnSelectedChange(tr,-1); // this will automatically update the surface
 	  return true;
@@ -666,7 +667,7 @@ class CSurf_MCU : public IReaperControlSurface
 	bool OnChannelSelectDC( MIDI_event_t *evt ) {
 	  int tid=evt->midi_message[1]-0x18;
 	  tid&=7;
-	  tid+=1+m_allmcus_bank_offset+m_offset;
+	  tid+=1+m_allmf8s_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
 	  
 	  // Clear already selected tracks
@@ -730,7 +731,7 @@ class CSurf_MCU : public IReaperControlSurface
     if (m_midiout) 
       m_midiout->Send(0x90,0x50,0x7f,-1);
     SendMessage(g_hwnd,WM_COMMAND,IsKeyDown(VK_SHIFT)?ID_FILE_SAVEAS:ID_FILE_SAVEPROJECT,0);
-    ScheduleAction( timeGetTime() + 1000, &CSurf_MCU::ClearSaveLed );
+    ScheduleAction( timeGetTime() + 1000, &CSurf_MF8::ClearSaveLed );
     return true;
 	}
 	
@@ -743,7 +744,7 @@ class CSurf_MCU : public IReaperControlSurface
     if (m_midiout) 
       m_midiout->Send(0x90,0x51,0x7f,-1);
     SendMessage(g_hwnd,WM_COMMAND,IsKeyDown(VK_SHIFT)?IDC_EDIT_REDO:IDC_EDIT_UNDO,0);
-    ScheduleAction( timeGetTime() + 150, &CSurf_MCU::ClearUndoLed );
+    ScheduleAction( timeGetTime() + 150, &CSurf_MF8::ClearUndoLed );
     return true;
 	}
 	
@@ -831,31 +832,31 @@ class CSurf_MCU : public IReaperControlSurface
 	  static const int nPressOnlyHandlers = 20;
 	  static const ButtonHandler handlers[nHandlers] = {
 	      // Press down only events
-	      { 0x4a, 0x4e, &CSurf_MCU::OnAutoMode,           NULL },
-	      { 0x2e, 0x31, &CSurf_MCU::OnBankChannel,        NULL },
-	      { 0x35, 0x35, &CSurf_MCU::OnSMPTEBeats,         NULL },
-	      { 0x20, 0x27, &CSurf_MCU::OnRotaryEncoderPush,  NULL },
-	      { 0x00, 0x07, &CSurf_MCU::OnRecArm,             NULL },
-	      { 0x08, 0x0f, NULL,                             &CSurf_MCU::OnSoloDC },
-	      { 0x08, 0x17, &CSurf_MCU::OnMuteSolo,           NULL },
-	      { 0x18, 0x1f, &CSurf_MCU::OnChannelSelect,      &CSurf_MCU::OnChannelSelectDC },
-	      { 0x5b, 0x5f, &CSurf_MCU::OnTransport,          NULL },
-	      { 0x54, 0x54, &CSurf_MCU::OnMarker,             NULL },
-	      { 0x56, 0x56, &CSurf_MCU::OnCycle,              NULL },
-	      { 0x59, 0x59, &CSurf_MCU::OnClick,              NULL },
-	      { 0x50, 0x50, &CSurf_MCU::OnSave,               NULL },
-	      { 0x51, 0x51, &CSurf_MCU::OnUndo,               NULL },
-	      { 0x64, 0x64, &CSurf_MCU::OnZoom,               NULL },
-	      { 0x65, 0x65, &CSurf_MCU::OnScrub,              NULL },
-	      { 0x32, 0x32, &CSurf_MCU::OnFlip,               NULL },
-	      { 0x33, 0x33, &CSurf_MCU::OnGlobal,             NULL },
-	      { 0x36, 0x3d, &CSurf_MCU::OnFunctionKey,        NULL },
-	      { 0x5a, 0x5a, &CSurf_MCU::OnSoloButton,         NULL },
+	      { 0x4a, 0x4e, &CSurf_MF8::OnAutoMode,           NULL },
+	      { 0x2e, 0x31, &CSurf_MF8::OnBankChannel,        NULL },
+	      { 0x35, 0x35, &CSurf_MF8::OnSMPTEBeats,         NULL },
+	      { 0x20, 0x27, &CSurf_MF8::OnRotaryEncoderPush,  NULL },
+	      { 0x00, 0x07, &CSurf_MF8::OnRecArm,             NULL },
+	      { 0x08, 0x0f, NULL,                             &CSurf_MF8::OnSoloDC },
+	      { 0x08, 0x17, &CSurf_MF8::OnMuteSolo,           NULL },
+	      { 0x18, 0x1f, &CSurf_MF8::OnChannelSelect,      &CSurf_MF8::OnChannelSelectDC },
+	      { 0x5b, 0x5f, &CSurf_MF8::OnTransport,          NULL },
+	      { 0x54, 0x54, &CSurf_MF8::OnMarker,             NULL },
+	      { 0x56, 0x56, &CSurf_MF8::OnCycle,              NULL },
+	      { 0x59, 0x59, &CSurf_MF8::OnClick,              NULL },
+	      { 0x50, 0x50, &CSurf_MF8::OnSave,               NULL },
+	      { 0x51, 0x51, &CSurf_MF8::OnUndo,               NULL },
+	      { 0x64, 0x64, &CSurf_MF8::OnZoom,               NULL },
+	      { 0x65, 0x65, &CSurf_MF8::OnScrub,              NULL },
+	      { 0x32, 0x32, &CSurf_MF8::OnFlip,               NULL },
+	      { 0x33, 0x33, &CSurf_MF8::OnGlobal,             NULL },
+	      { 0x36, 0x3d, &CSurf_MF8::OnFunctionKey,        NULL },
+	      { 0x5a, 0x5a, &CSurf_MF8::OnSoloButton,         NULL },
 	      
 	      // Press and release events
-	      { 0x46, 0x49, &CSurf_MCU::OnKeyModifier },
-	      { 0x60, 0x63, &CSurf_MCU::OnScroll },
-	      { 0x68, 0x70, &CSurf_MCU::OnTouch },
+	      { 0x46, 0x49, &CSurf_MF8::OnKeyModifier },
+	      { 0x60, 0x63, &CSurf_MF8::OnScroll },
+	      { 0x68, 0x70, &CSurf_MF8::OnTouch },
 	  };
 
 	  unsigned int evt_code = evt->midi_message[1];  //get_midi_evt_code( evt );
@@ -920,11 +921,11 @@ class CSurf_MCU : public IReaperControlSurface
 
         static const int nHandlers = 5;
         static const MidiHandlerFunc handlers[nHandlers] = {
-            &CSurf_MCU::OnMCUReset,
-            &CSurf_MCU::OnFaderMove,
-            &CSurf_MCU::OnRotaryEncoder,
-            &CSurf_MCU::OnJogWheel,
-            &CSurf_MCU::OnButtonPress,
+            &CSurf_MF8::OnMF8Reset,
+            &CSurf_MF8::OnFaderMove,
+            &CSurf_MF8::OnRotaryEncoder,
+            &CSurf_MF8::OnJogWheel,
+            &CSurf_MF8::OnButtonPress,
         };
         for ( int i = 0; i < nHandlers; i++ )
           if ( (this->*handlers[i])(evt) ) return;
@@ -932,13 +933,13 @@ class CSurf_MCU : public IReaperControlSurface
 
 public:
 
-    CSurf_MCU(bool ismcuex, int offset, int size, int indev, int outdev, int cfgflags, int *errStats) 
+    CSurf_MF8(bool ismf8ex, int offset, int size, int indev, int outdev, int cfgflags, int *errStats) 
     {
       m_cfg_flags=cfgflags;
 
-      m_mcu_list.Add(this);
+      m_mf8_list.Add(this);
 
-      m_is_mcuex=ismcuex; 
+      m_is_mf8ex=ismf8ex; 
       m_offset=offset;
       m_size=size;
       m_midi_in_dev=indev;
@@ -947,10 +948,10 @@ public:
 
       // init locals
       int x;
-      for (x = 0; x < sizeof(m_mcu_meterpos)/sizeof(m_mcu_meterpos[0]); x ++)
-        m_mcu_meterpos[x]=-100000.0;
-      m_mcu_timedisp_lastforce=0;
-      m_mcu_meter_lastrun=0;
+      for (x = 0; x < sizeof(m_mf8_meterpos)/sizeof(m_mf8_meterpos[0]); x ++)
+        m_mf8_meterpos[x]=-100000.0;
+      m_mf8_timedisp_lastforce=0;
+      m_mf8_meter_lastrun=0;
       memset(m_fader_touchstate,0,sizeof(m_fader_touchstate));
       memset(m_fader_lasttouch,0,sizeof(m_fader_lasttouch));
       memset(m_pan_lasttouch,0,sizeof(m_pan_lasttouch));
@@ -966,7 +967,7 @@ public:
         if (m_midi_out_dev >=0  && !m_midiout) *errStats|=2;
       }
 
-      MCUReset();
+      MF8Reset();
 
       if (m_midiin)
         m_midiin->start();
@@ -976,9 +977,9 @@ public:
       m_selected_tracks = NULL;
     }
     
-    ~CSurf_MCU() 
+    ~CSurf_MF8() 
     {
-      m_mcu_list.Delete(m_mcu_list.Find(this));
+      m_mf8_list.Delete(m_mf8_list.Find(this));
       if (m_midiout)
       {
 
@@ -995,7 +996,7 @@ public:
         poo.evt.midi_message[1]=0x00;
         poo.evt.midi_message[2]=0x00;
         poo.evt.midi_message[3]=0x66;
-        poo.evt.midi_message[4]=m_is_mcuex ? 0x15 : 0x14;
+        poo.evt.midi_message[4]=m_is_mf8ex ? 0x15 : 0x14;
         poo.evt.midi_message[5]=0x08;
         poo.evt.midi_message[6]=0x00;
         poo.evt.midi_message[7]=0xF7;
@@ -1030,10 +1031,10 @@ public:
 
 
 
-    const char *GetTypeString() { return m_is_mcuex ? "MCUEX" : "MCU"; }
+    const char *GetTypeString() { return m_is_mf8ex ? "MF8EX" : "MF8"; }
     const char *GetDescString()
     {
-      m_descspace.Set(m_is_mcuex ? "Mackie Control Extended FLU" : "Mackie Control FLU");
+      m_descspace.Set(m_is_mf8ex ? "Mackie Control Extended FLU" : "Mackie Control FLU");
       char tmp[512];
       sprintf(tmp," (dev %d,%d)",m_midi_in_dev,m_midi_out_dev);
       m_descspace.Append(tmp);
@@ -1069,7 +1070,7 @@ public:
         
         if (m_midiout)
         {
-          if (!m_is_mcuex)
+          if (!m_is_mf8ex)
           {
             double pp=(GetPlayState()&1) ? GetPlayPosition() : GetCursorPosition();
             unsigned char bla[10];
@@ -1197,9 +1198,9 @@ public:
             //if (memcmp(m_mackie_lasttime,bla,sizeof(bla)))
             {
               bool force=false;
-              if (now > m_mcu_timedisp_lastforce) 
+              if (now > m_mf8_timedisp_lastforce) 
               {
-                m_mcu_timedisp_lastforce=now+2000;
+                m_mf8_timedisp_lastforce=now+2000;
                 force=true;
               }
               int x;
@@ -1222,23 +1223,23 @@ public:
             int x;
       #define VU_BOTTOM 70
             double decay=0.0;
-            if (m_mcu_meter_lastrun) 
+            if (m_mf8_meter_lastrun) 
             {
-              decay=VU_BOTTOM * (double) (now-m_mcu_meter_lastrun)/(1.4*1000.0);            // they claim 1.8s for falloff but we'll underestimate
+              decay=VU_BOTTOM * (double) (now-m_mf8_meter_lastrun)/(1.4*1000.0);            // they claim 1.8s for falloff but we'll underestimate
             }
-            m_mcu_meter_lastrun=now;
+            m_mf8_meter_lastrun=now;
             for (x = 0; x < 8; x ++)
             {
-              int idx=m_offset+m_allmcus_bank_offset+x+1;
+              int idx=m_offset+m_allmf8s_bank_offset+x+1;
               MediaTrack *t;
               if ((t=CSurf_TrackFromID(idx,g_csurf_mcpmode)))
               {
                 double pp=VAL2DB((Track_GetPeakInfo(t,0)+Track_GetPeakInfo(t,1)) * 0.5);
 
-                if (m_mcu_meterpos[x] > -VU_BOTTOM*2) m_mcu_meterpos[x] -= decay;
+                if (m_mf8_meterpos[x] > -VU_BOTTOM*2) m_mf8_meterpos[x] -= decay;
 
-                if (pp < m_mcu_meterpos[x]) continue;
-                m_mcu_meterpos[x]=pp;
+                if (pp < m_mf8_meterpos[x]) continue;
+                m_mf8_meterpos[x]=pp;
                 int v=0xd; // 0xe turns on clip indicator, 0xf turns it off
                 if (pp < 0.0)
                 {
@@ -1301,7 +1302,7 @@ public:
         int x;
         for (x = 0; x < 8; x ++)
         {
-          MediaTrack *t=CSurf_TrackFromID(x+m_offset+m_allmcus_bank_offset+1,g_csurf_mcpmode);
+          MediaTrack *t=CSurf_TrackFromID(x+m_offset+m_allmf8s_bank_offset+1,g_csurf_mcpmode);
           if (!t || t == CSurf_TrackFromID(0,false))
           {
             // clear item
@@ -1334,7 +1335,7 @@ public:
             poo.evt.midi_message[1]=0x00;
             poo.evt.midi_message[2]=0x00;
             poo.evt.midi_message[3]=0x66;
-            poo.evt.midi_message[4]=m_is_mcuex ? 0x15 : 0x14;
+            poo.evt.midi_message[4]=m_is_mf8ex ? 0x15 : 0x14;
             poo.evt.midi_message[5]=0x20;
             poo.evt.midi_message[6]=0x00+x;
             poo.evt.midi_message[7]=0x03;
@@ -1348,7 +1349,7 @@ public:
       }
     }
 #define FIXID(id) int id=CSurf_TrackToID(trackid,g_csurf_mcpmode); int oid=id; \
-  if (id>0) { id -= m_offset+m_allmcus_bank_offset+1; if (id==8) id=-1; } else if (id==0) id=8; 
+  if (id>0) { id -= m_offset+m_allmf8s_bank_offset+1; if (id==8) id=-1; } else if (id==0) id=8; 
 
     void SetSurfaceVolume(MediaTrack *trackid, double volume) 
     { 
@@ -1509,7 +1510,7 @@ public:
     }
     void SetPlayState(bool play, bool pause, bool rec) 
     { 
-      if (m_midiout && !m_is_mcuex)
+      if (m_midiout && !m_is_mf8ex)
       {
         m_midiout->Send(0x90, 0x5f,rec?0x7f:0,-1);
         m_midiout->Send(0x90, 0x5e,play||pause?0x7f:0,-1);
@@ -1518,7 +1519,7 @@ public:
     }
     void SetRepeatState(bool rep) 
     {
-      if (m_midiout && !m_is_mcuex)
+      if (m_midiout && !m_is_mf8ex)
       {
         m_midiout->Send(0x90, 0x56,rep?0x7f:0,-1);
       }
@@ -1579,7 +1580,7 @@ public:
     }
 
     void UpdateAutoModes() {
-      if ( m_midiout && !m_is_mcuex ) {
+      if ( m_midiout && !m_is_mf8ex ) {
         int modes[5] = { 0, 0, 0, 0, 0 };
         for ( SelectedTrack *i = m_selected_tracks; i; i = i->next ) {
           MediaTrack *track = i->track();
@@ -1606,36 +1607,36 @@ public:
     void OnTrackSelection(MediaTrack *trackid) 
     { 
       int tid=CSurf_TrackToID(trackid,g_csurf_mcpmode);
-      // if no normal MCU's here, then slave it
+      // if no normal MF8's here, then slave it
       int x;
       int movesize=8;
-      for (x = 0; x < m_mcu_list.GetSize(); x ++)
+      for (x = 0; x < m_mf8_list.GetSize(); x ++)
       {
-        CSurf_MCU *mcu=m_mcu_list.Get(x);
-        if (mcu)
+        CSurf_MF8 *mf8=m_mf8_list.Get(x);
+        if (mf8)
         {
-          if (mcu->m_offset+8 > movesize)
-            movesize=mcu->m_offset+8;
+          if (mf8->m_offset+8 > movesize)
+            movesize=mf8->m_offset+8;
         }
       }
 
       int newpos=tid-1;
-      if (newpos >= 0 && (newpos < m_allmcus_bank_offset || newpos >= m_allmcus_bank_offset+movesize))
+      if (newpos >= 0 && (newpos < m_allmf8s_bank_offset || newpos >= m_allmf8s_bank_offset+movesize))
       {
         int no = newpos - (newpos % movesize);
 
-        if (no!=m_allmcus_bank_offset)
+        if (no!=m_allmf8s_bank_offset)
         {
-          m_allmcus_bank_offset=no;
+          m_allmf8s_bank_offset=no;
           // update all of the sliders
           TrackList_UpdateAllExternalSurfaces();
-          for (x = 0; x < m_mcu_list.GetSize(); x ++)
+          for (x = 0; x < m_mf8_list.GetSize(); x ++)
           {
-            CSurf_MCU *mcu=m_mcu_list.Get(x);
-            if (mcu && !mcu->m_is_mcuex && mcu->m_midiout)
+            CSurf_MF8 *mf8=m_mf8_list.Get(x);
+            if (mf8 && !mf8->m_is_mf8ex && mf8->m_midiout)
             {
-              mcu->m_midiout->Send(0xB0,0x40+11,'0'+(((m_allmcus_bank_offset+1)/10)%10),-1);
-              mcu->m_midiout->Send(0xB0,0x40+10,'0'+((m_allmcus_bank_offset+1)%10),-1);
+              mf8->m_midiout->Send(0xB0,0x40+11,'0'+(((m_allmf8s_bank_offset+1)/10)%10),-1);
+              mf8->m_midiout->Send(0xB0,0x40+10,'0'+((m_allmf8s_bank_offset+1)%10),-1);
             }
           }
         }
@@ -1644,7 +1645,7 @@ public:
     
     bool IsKeyDown(int key) 
     { 
-      if (m_midiin && !m_is_mcuex)
+      if (m_midiin && !m_is_mf8ex)
       {
         if (key == VK_SHIFT) return !!(m_mackie_modifiers&1);
         if (key == VK_CONTROL) return !!(m_mackie_modifiers&4);
@@ -1681,7 +1682,7 @@ static IReaperControlSurface *createFunc(const char *type_string, const char *co
   int parms[5];
   parseParms(configString,parms);
 
-  return new CSurf_MCU(!strcmp(type_string,"MCUEX"),parms[0],parms[1],parms[2],parms[3],parms[4],errStats);
+  return new CSurf_MF8(!strcmp(type_string,"MF8EX"),parms[0],parms[1],parms[2],parms[3],parms[4],errStats);
 }
 
 
@@ -1766,21 +1767,21 @@ static WDL_DLGRET dlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 static HWND configFunc(const char *type_string, HWND parent, const char *initConfigString)
 {
-  return CreateDialogParam(g_hInst,MAKEINTRESOURCE(IDD_SURFACEEDIT_MCU1),parent,dlgProc,(LPARAM)initConfigString);
+  return CreateDialogParam(g_hInst,MAKEINTRESOURCE(IDD_SURFACEEDIT_MF81),parent,dlgProc,(LPARAM)initConfigString);
 }
 
 
-reaper_csurf_reg_t csurf_mcu_reg = 
+reaper_csurf_reg_t csurf_mf8_reg = 
 {
-  "MCU",
-  "Mackie Control Universal FLU",
+  "MF8",
+  "Samson Graphite MF8 (MCU)",
   createFunc,
   configFunc,
 };
-reaper_csurf_reg_t csurf_mcuex_reg = 
+reaper_csurf_reg_t csurf_mf8ex_reg = 
 {
-  "MCUEX",
-  "Mackie Control Extender FLU",
+  "MF8EX",
+  "Samson Graphite MF8 (MCE)",
   createFunc,
   configFunc,
 };
