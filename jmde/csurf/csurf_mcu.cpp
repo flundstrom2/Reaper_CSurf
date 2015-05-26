@@ -1033,7 +1033,7 @@ public:
     const char *GetTypeString() { return m_is_mcuex ? "MCUEX" : "MCU"; }
     const char *GetDescString()
     {
-      m_descspace.Set(m_is_mcuex ? "Mackie Control Extended" : "Mackie Control");
+      m_descspace.Set(m_is_mcuex ? "Mackie Control Extended FLU" : "Mackie Control FLU");
       char tmp[512];
       sprintf(tmp," (dev %d,%d)",m_midi_in_dev,m_midi_out_dev);
       m_descspace.Append(tmp);
@@ -1773,14 +1773,14 @@ static HWND configFunc(const char *type_string, HWND parent, const char *initCon
 reaper_csurf_reg_t csurf_mcu_reg = 
 {
   "MCU",
-  "Mackie Control Universal",
+  "Mackie Control Universal FLU",
   createFunc,
   configFunc,
 };
 reaper_csurf_reg_t csurf_mcuex_reg = 
 {
   "MCUEX",
-  "Mackie Control Extender",
+  "Mackie Control Extender FLU",
   createFunc,
   configFunc,
 };
