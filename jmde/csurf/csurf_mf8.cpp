@@ -285,7 +285,7 @@ class CSurf_MF8 : public IReaperControlSurface
 {
     bool m_is_mf8ex;
     int m_midi_in_dev,m_midi_out_dev;
-    int m_offset, m_size;
+    int m_offset, m_size; // Size seems to be related to maximum number of strips on the MCU.
     midi_Output *m_midiout;
     midi_Input *m_midiin;
 
