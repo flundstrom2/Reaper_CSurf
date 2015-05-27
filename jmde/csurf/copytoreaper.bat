@@ -1,0 +1,48 @@
+@echo off
+echo MUST be run as Admin!
+:: BatchGotAdmin
+:: from http://stackoverflow.com/questions/1894967/how-to-request-administrator-access-inside-a-batch-file
+
+:-------------------------------------
+REM  --> Check for permissions
+>nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
+
+REM --> If error flag set, we do not have admin.
+if '%errorlevel%' NEQ '0' (
+    echo Requesting administrative privileges...
+    goto UACPrompt
+) else ( goto gotAdmin )
+
+:UACPrompt
+    echo Set UAC = CreateObject^("Shell.Application"^) > "%temp%\getadmin.vbs"
+    set params = %*:"=""
+    echo UAC.ShellExecute "cmd.exe", "/c %~s0 %params%", "", "runas", 1 >> "%temp%\getadmin.vbs"
+
+    "%temp%\getadmin.vbs"
+    del "%temp%\getadmin.vbs"
+    exit /B
+
+:gotAdmin
+    pushd "%CD%"
+    CD /D "%~dp0"
+:--------------------------------------
+
+cd "C:\Users\Fredrik\Documents\Visual Studio 2008\Projects\reaper_extension_sdk\jmde\csurf"
+echo Shutting down REAPER (if it exist)...
+
+:retry
+taskkill 2>&1 /IM reaper.exe >NUL
+set rc=%ERRORLEVEL%
+if %rc% EQU 128 goto cont
+sleep 2s
+taskkill 2>&1 /IM reaper.exe >NUL
+set rc=%ERRORLEVEL%
+if %rc% EQU 128 goto cont
+echo REAPER seems to request your attention
+goto retry
+
+:cont
+echo Copying...
+xcopy ..\Debug\Plugins\reaper_csurf_mf8.dll "C:\Program Files (x86)\REAPER\Plugins" /Y
+echo Starting REAPER...
+start /B startreaper.bat
