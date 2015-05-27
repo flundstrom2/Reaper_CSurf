@@ -11,7 +11,7 @@
 #include "csurf.h"
 #include "../../WDL/ptrlist.h"
 
-#define _FLU_DEBUG
+//#define _FLU_DEBUG
 
 #ifdef _FLU_DEBUG
 static void ShowConsoleMsgF(const char *fmt, ...)
@@ -23,7 +23,7 @@ static void ShowConsoleMsgF(const char *fmt, ...)
 	ShowConsoleMsg(buffer);
 }
 #else
-#define ShowConsoleMsgF() do { } while (0)
+#define ShowConsoleMsgF(...) do { } while (0)
 #endif
 
 
