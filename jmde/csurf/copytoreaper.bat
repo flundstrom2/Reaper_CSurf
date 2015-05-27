@@ -29,16 +29,17 @@ if '%errorlevel%' NEQ '0' (
 
 cd "C:\Users\Fredrik\Documents\Visual Studio 2008\Projects\reaper_extension_sdk\jmde\csurf"
 echo Shutting down REAPER (if it exist)...
+taskkill 2>&1 >NUL /IM reaper.exe
+set rc=%ERRORLEVEL%
+sleep 3s
+if %rc% EQU 128 goto cont
 
 :retry
-taskkill 2>&1 /IM reaper.exe >NUL
+tasklist /FI "IMAGENAME eq REAPER.exe" | find >NUL /i "REAPER.exe"
 set rc=%ERRORLEVEL%
-if %rc% EQU 128 goto cont
-sleep 2s
-taskkill 2>&1 /IM reaper.exe >NUL
-set rc=%ERRORLEVEL%
-if %rc% EQU 128 goto cont
-echo REAPER seems to request your attention
+IF %rc% EQU 1 GOTO cont
+echo REAPER seems to request your attention...
+sleep 1s
 goto retry
 
 :cont
