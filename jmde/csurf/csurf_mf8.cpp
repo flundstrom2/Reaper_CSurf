@@ -1,8 +1,9 @@
 /*
 ** reaper_csuf
 ** Samson Graphite MF8 support (Based on MCU implementation)
+** Author: Fredrik Lundström, Studio Scrap 'N' Sound
+** e-mail: fredrik.lundstrom.1974@gmail.com
 ** Copyright (C) 2006-2015 Cockos Incorporated
-** Author: Fredrik Lundström
 ** License: LGPL.
 */
 
@@ -444,6 +445,9 @@ class CSurf_MF8 : public IReaperControlSurface
     }
     
     bool OnFaderMove(MIDI_event_t *evt) {
+//  Ex vv vv    :   volume fader move, x=0..7, 8=master, vv vv is int14
+//  B0 1x vv    :   pan fader move, x=0..7, vv has 40 set if negative, low bits 0-31 are move amount
+//  B0 3C vv    :   jog wheel move, 01 or 41
 	  bool volume_fader_move = false;
 	  if ((evt->midi_message[0]&0xf0) == 0xe0) 
 		volume_fader_move = true;
@@ -473,12 +477,8 @@ class CSurf_MF8 : public IReaperControlSurface
 		  m_flipmode ? "TRUE" : "false"*/
 		  );
       ShowConsoleMsg(debugs);
-//  Ex vv vv    :   volume fader move, x=0..7, 8=master, vv vv is int14
-//  B0 1x vv    :   pan fader move, x=0..7, vv has 40 set if negative, low bits 0-31 are move amount
-//  B0 3C vv    :   jog wheel move, 01 or 41
-
-
-#endif        m_fader_lastmove = timeGetTime();
+#endif
+        m_fader_lastmove = timeGetTime();
 
         if (tid>=0&&tid<9 && m_fader_lasttouch[tid]!=0xffffffff)
           m_fader_lasttouch[tid]=m_fader_lastmove;
@@ -502,7 +502,7 @@ class CSurf_MF8 : public IReaperControlSurface
 			ShowConsoleMsg("OnFaderMove INVALID track (but returning true)\n");
 		}
         return true;
-      } 
+      }
       return false;
     }
 
