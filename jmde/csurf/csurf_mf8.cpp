@@ -10,6 +10,8 @@
 #include "csurf.h"
 #include "../../WDL/ptrlist.h"
 
+//#define _FLU_DEBUG
+
 /*
 MCU documentation:
 
@@ -197,6 +199,9 @@ static WDL_PtrList<CSurf_MF8> m_mf8_list;
 static bool g_csurf_mcpmode;
 static int m_flipmode;
 static int m_allmf8s_bank_offset;
+static bool g_ignore_channelselect = true;
+static const double g_panadj = (1.0/4); // Used by OnRotaryEncoder
+static const double g_voladj = 11.0;// Used by OnRotaryEncoder
 
 typedef void (CSurf_MF8::*ScheduleFunc)();
 
@@ -268,6 +273,7 @@ class CSurf_MF8 : public IReaperControlSurface
     midi_Output *m_midiout;
     midi_Input *m_midiin;
 
+	double m_pan_lastchanges[256];
     int m_vol_lastpos[256];
     int m_pan_lastpos[256];
     char m_mackie_lasttime[10];
@@ -323,6 +329,7 @@ class CSurf_MF8 : public IReaperControlSurface
       memset(m_fader_touchstate,0,sizeof(m_fader_touchstate));
       memset(m_fader_lasttouch,0,sizeof(m_fader_lasttouch));
       memset(m_pan_lasttouch,0,sizeof(m_pan_lasttouch));
+	  memset(m_pan_lastchanges, 0, sizeof(m_pan_lastchanges));
       m_mackie_lasttime_mode=-1;
       m_mackie_modifiers=0;
       m_buttonstate_lastrun=0;
@@ -418,11 +425,17 @@ class CSurf_MF8 : public IReaperControlSurface
     typedef bool (CSurf_MF8::*MidiHandlerFunc)(MIDI_event_t*);
     
     bool OnMF8Reset(MIDI_event_t *evt) {
+#ifdef _FLU_DEBUG
+//		ShowConsoleMsg("OnMF8Reset invoked\n");
+#endif
       unsigned char onResetMsg[]={0xf0,0x00,0x00,0x66,0x14,0x01,0x58,0x59,0x5a,};
       onResetMsg[4]=m_is_mf8ex ? 0x15 : 0x14; 
       if (evt->midi_message[0]==0xf0 && evt->size >= sizeof(onResetMsg) && !memcmp(evt->midi_message,onResetMsg,sizeof(onResetMsg)))
       {
         // on reset
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnMF8Reset executing\n");
+#endif
         MF8Reset();
         TrackList_UpdateAllExternalSurfaces();
         return true;
@@ -431,18 +444,46 @@ class CSurf_MF8 : public IReaperControlSurface
     }
     
     bool OnFaderMove(MIDI_event_t *evt) {
-      if ((evt->midi_message[0]&0xf0) == 0xe0) // volume fader move
-      {
-        m_fader_lastmove = timeGetTime();
+	  bool volume_fader_move = false;
+	  if ((evt->midi_message[0]&0xf0) == 0xe0) 
+		volume_fader_move = true;
+      int tid=evt->midi_message[0]&0xf;
+	  double panlvl = int14ToPan(evt->midi_message[2],evt->midi_message[1]);
+	  double vollvl = int14ToVol(evt->midi_message[2],evt->midi_message[1]);
+	  int tidc = tid;
+      if (tid == 8) tidc=0; // master offset, master=0
+      else tidc = tid + 1+m_offset+m_allmf8s_bank_offset;
 
-        int tid=evt->midi_message[0]&0xf;
+	  // GetSetMediaTrackInfo_String(MediaTrack* tr, const char* parmname, char* stringNeedBig, bool setnewvalue);
+
+
+      if (volume_fader_move) // volume fader move
+      {
+#ifdef _FLU_DEBUG
+		  // This is actually also invoked for OnRotaryEncoder as well, but don't log it here.
+      char debugs[256];
+	  sprintf(debugs, "OnFaderMove %s tid=%u (tidc=%u) %s=%f\n"/* reltime=%ums m_flip_mode=%s\n" */, 
+		  (volume_fader_move ? "VOLUME" : "Pan   "),
+		  tid,
+		  tidc,
+		  (volume_fader_move ? "vollvl" : "panlvl"),
+		  (volume_fader_move ? vollvl : panlvl)/*,
+		  m_fader_lasttouch[tid],
+		  timeGetTime() - m_fader_lasttouch[tid],
+		  m_flipmode ? "TRUE" : "false"*/
+		  );
+      ShowConsoleMsg(debugs);
+//  Ex vv vv    :   volume fader move, x=0..7, 8=master, vv vv is int14
+//  B0 1x vv    :   pan fader move, x=0..7, vv has 40 set if negative, low bits 0-31 are move amount
+//  B0 3C vv    :   jog wheel move, 01 or 41
+
+
+#endif        m_fader_lastmove = timeGetTime();
+
         if (tid>=0&&tid<9 && m_fader_lasttouch[tid]!=0xffffffff)
           m_fader_lasttouch[tid]=m_fader_lastmove;
 
-        if (tid == 8) tid=0; // master offset, master=0
-        else tid+= 1+m_offset+m_allmf8s_bank_offset;
-
-        MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
+        MediaTrack *tr=CSurf_TrackFromID(tidc,g_csurf_mcpmode);
 
         if (tr)
         {
@@ -451,54 +492,135 @@ class CSurf_MF8 : public IReaperControlSurface
           }
           else if (m_flipmode)
           {
-            CSurf_SetSurfacePan(tr,CSurf_OnPanChange(tr,int14ToPan(evt->midi_message[2],evt->midi_message[1]),false),NULL);
+            CSurf_SetSurfacePan(tr,CSurf_OnPanChange(tr,panlvl,false),NULL);
           }
-          else
-            CSurf_SetSurfaceVolume(tr,CSurf_OnVolumeChange(tr,int14ToVol(evt->midi_message[2],evt->midi_message[1]),false),NULL);
-        }
+          else 
+		  {
+            CSurf_SetSurfaceVolume(tr,CSurf_OnVolumeChange(tr,vollvl,false),NULL);
+		  }
+		} else {
+			ShowConsoleMsg("OnFaderMove INVALID track (but returning true)\n");
+		}
         return true;
       } 
       return false;
     }
 
 	bool OnRotaryEncoder( MIDI_event_t *evt ) {
+		bool pan = false;
+#ifdef _FLU_DEBUG
+		char debug[256];
+#endif
 	  if ( (evt->midi_message[0]&0xf0) == 0xb0 && 
 	      evt->midi_message[1] >= 0x10 && 
 	      evt->midi_message[1] < 0x18 ) // pan
 	  {
+		  pan = true;
+	  }
+#ifdef _FLU_DEBUG
+	  else {
+		ShowConsoleMsg("OnRotaryEncoder invoked\n");
+	  }
+#endif
+	  if (pan) {
 	    int tid=evt->midi_message[1]-0x10;
+		int tidc = tid;
 
 	    m_pan_lasttouch[tid&7]=timeGetTime();
 
-	    if (tid == 8) tid=0; // adjust for master
-	    else tid+=1+m_offset+m_allmf8s_bank_offset;
-	    MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
+	    if (tid == 8) tidc=0; // adjust for master
+	    else tidc =tid + 1+m_offset+m_allmf8s_bank_offset;
+	    MediaTrack *tr=CSurf_TrackFromID(tidc,g_csurf_mcpmode);
 	    if (tr)
 	    {
 	      double adj=(evt->midi_message[2]&0x3f)/31.0;
+		  bool restored = false;
+
 	      if (evt->midi_message[2]&0x40) adj=-adj;
+		    double voladjc = 0;
+			double vollvl = 0;
+			if(m_flipmode) {
+  				voladjc = adj*g_voladj;
+				vollvl=CSurf_OnVolumeChange(tr,voladjc,true);
+			}
+
+  		    // Correct for REAPER center-lock when panning close to center
+  		    double panadjc = adj*g_panadj;
+		    m_pan_lastchanges[tid] +=panadjc;
+			// Note! This will  essentially invoke CSurf_OnPanChange twice, so g_panadj must be 2 times larger 
+			double panlvl=CSurf_OnPanChange(tr,panadjc,true);
+			// 0.0 indicates centered
+			if(panlvl == 0.0 && (m_pan_lastchanges[tid] > 5 * m_pan_lastchanges[tid] || m_pan_lastchanges[tid] < 5 * m_pan_lastchanges[tid&7])) {
+				panadjc /= g_panadj; // Restore to original adj
+				m_pan_lastchanges[tid] = panadjc;
+				restored = true;
+			}
+
+// Nu fugerar det hyffsat: encodern blir korrekt linjär från 100% L till center samt från 100% R till center
+// Men efter centreringen så vägrar CSurf_OnVolumeChange() returnera annat än 0.0 tills dess att rotaryn gått i botten. (?)
+// Bug i reaper!?
+
+#ifdef _FLU_DEBUG
+		  sprintf(debug, "OnRotaryEncoder executed %s tid=%d (tidc=%d) adj=%f "
+			  "(adjc=%f) lvl=%f "
+			  "m_flipmode=%s restored=%s\n",
+			(pan ? "PAN   " : "volume"),
+			tid,
+			tidc,
+			adj,
+			(pan ? panadjc : voladjc),
+			(pan ? panlvl : vollvl),
+			(m_flipmode ? "TRUE" : "false"),
+			(restored ? "TRUE" : "false")
+			);
+		  ShowConsoleMsg(debug);
+#endif
 	      if (m_flipmode)
 	      {
-	        CSurf_SetSurfaceVolume(tr,CSurf_OnVolumeChange(tr,adj*11.0,true),NULL);
+	        CSurf_SetSurfaceVolume(tr,vollvl,NULL);
 	      }
 	      else
 	      {
-	        CSurf_SetSurfacePan(tr,CSurf_OnPanChange(tr,adj,true),NULL);
+	        CSurf_SetSurfacePan(tr,CSurf_OnPanChange(tr,panadjc,true),NULL);
 	      }
-	    }
+		} else {
+#ifdef _FLU_DEBUG
+		sprintf(debug, "OnRotaryEncoder %s INVALID track for tid=%d (tidc=%d)\n",
+			(pan ? "PAN   " : "volume"),
+			tid,
+			tidc
+			);
+		ShowConsoleMsg(debug);
+#endif
+		}
 	    return true;
 	  }
 	  return false;
 	}
 	
 	bool OnJogWheel( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnJogWheel invoked\n");
+#endif
     if ( (evt->midi_message[0]&0xf0) == 0xb0 &&
          evt->midi_message[1] == 0x3c ) // jog wheel
      {
-       if (evt->midi_message[2] == 0x41)  
+	   bool rev = false;
+	   bool fwd = false;
+	   if (evt->midi_message[2] == 0x41) {
          CSurf_OnRew(m_mackie_arrow_states&128);
-       else  if (evt->midi_message[2] == 0x01)  
+		 rev = true;
+	   } else  if (evt->midi_message[2] == 0x01)  {
          CSurf_OnFwd(m_mackie_arrow_states&128);
+		 fwd = true;
+	   }
+#ifdef _FLU_DEBUG
+	   char debug[256];
+	sprintf(debug, "OnJogWheel executed %s %s\n", 
+			rev ? "REV" : "",
+			fwd ? "FWD" : "");
+	ShowConsoleMsg(debug);
+#endif
        return true;
      }
     return false;
@@ -524,6 +646,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnBankChannel( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnBankChannel\n");
+#endif
 	  int maxfaderpos=0;
 	  int movesize=8;
 	  int x;
@@ -574,6 +699,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnSMPTEBeats( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnSMPTEBeats\n");
+#endif
     int *tmodeptr = (int*)projectconfig_var_addr(NULL,__g_projectconfig_timemode2);
 	  if (tmodeptr && *tmodeptr>=0)
 	  {
@@ -599,6 +727,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnRotaryEncoderPush( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnRotaryEncoderPush\n");
+#endif
 	  int trackid=evt->midi_message[1]-0x20;
 	  m_pan_lasttouch[trackid]=timeGetTime();
 
@@ -621,6 +752,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnRecArm( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnRecArm\n");
+#endif
 	  int tid=evt->midi_message[1];
 	  tid+=1+m_allmf8s_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
@@ -630,6 +764,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnMuteSolo( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnMuteSolo\n");
+#endif
 	  int tid=evt->midi_message[1]-0x08;
 	  int ismute=(tid&8);
 	  tid&=7;
@@ -647,6 +784,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnSoloDC( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnSoloDC\n");
+#endif
 	  int tid=evt->midi_message[1]-0x08;
 	  tid+=1+m_allmf8s_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
@@ -656,15 +796,37 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnChannelSelect( MIDI_event_t *evt ) {
+		if(g_ignore_channelselect) {
+#ifdef _FLU_DEBUG
+		  ShowConsoleMsg("OnChannelSelect: Ignoring...\n");
+#endif
+		  return false;
+		}
+
 	  int tid=evt->midi_message[1]-0x18;
-	  tid&=7;
-	  tid+=1+m_allmf8s_bank_offset+m_offset;
-	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
+	  int tidc = tid & 7;
+	  tidc+=1+m_allmf8s_bank_offset+m_offset;
+#ifdef _FLU_DEBUG
+		char debug[256];
+	  sprintf(debug, "OnChannelSelect tid=%d tidc=%d g_csurf_mcpmode=%s\n",
+		  tid, 
+		  tidc, 
+		  g_csurf_mcpmode ? "TRUE" : "false"
+	  );
+	  ShowConsoleMsg(debug);
+#endif
+	  MediaTrack *tr=CSurf_TrackFromID(tidc,g_csurf_mcpmode);
 	  if (tr) CSurf_OnSelectedChange(tr,-1); // this will automatically update the surface
+	  else {
+		  ShowConsoleMsg("OnChannelSelect: INVALID track!\n");
+	  }
 	  return true;
 	}
 	
 	bool OnChannelSelectDC( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnChannelSelectDC\n");
+#endif
 	  int tid=evt->midi_message[1]-0x18;
 	  tid&=7;
 	  tid+=1+m_allmf8s_bank_offset+m_offset;
@@ -688,6 +850,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 
 	bool OnTransport( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnTransport\n");
+#endif
     switch(evt->midi_message[1]) {
     case 0x5f:
        CSurf_OnRecord();
@@ -708,16 +873,25 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnMarker( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnMarker\n");
+#endif
     SendMessage(g_hwnd,WM_COMMAND,IsKeyDown(VK_SHIFT)?ID_INSERT_MARKERRGN:ID_INSERT_MARKER,0);
     return true;
 	}
 	
 	bool OnCycle( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnCycle\n");
+#endif
     SendMessage(g_hwnd,WM_COMMAND,IDC_REPEAT,0);
     return true;
 	}
 	
 	bool OnClick( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnClick\n");
+#endif
 	  SendMessage(g_hwnd,WM_COMMAND,ID_METRONOME,0);
 	  return true;
 	}
@@ -728,6 +902,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnSave( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnSave\n");
+#endif
     if (m_midiout) 
       m_midiout->Send(0x90,0x50,0x7f,-1);
     SendMessage(g_hwnd,WM_COMMAND,IsKeyDown(VK_SHIFT)?ID_FILE_SAVEAS:ID_FILE_SAVEPROJECT,0);
@@ -741,6 +918,9 @@ class CSurf_MF8 : public IReaperControlSurface
   }
   
 	bool OnUndo( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnUndo\n");
+#endif
     if (m_midiout) 
       m_midiout->Send(0x90,0x51,0x7f,-1);
     SendMessage(g_hwnd,WM_COMMAND,IsKeyDown(VK_SHIFT)?IDC_EDIT_REDO:IDC_EDIT_UNDO,0);
@@ -749,6 +929,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnZoom( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnZoom\n");
+#endif
     m_mackie_arrow_states^=64;
     if (m_midiout) 
       m_midiout->Send(0x90, 0x64,(m_mackie_arrow_states&64)?0x7f:0,-1);
@@ -756,6 +939,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnScrub( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnScrub\n");
+#endif
     m_mackie_arrow_states^=128;
     if (m_midiout) 
       m_midiout->Send(0x90, 0x65,(m_mackie_arrow_states&128)?0x7f:0,-1);
@@ -763,6 +949,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnFlip( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnFlip\n");
+#endif
 	  m_flipmode=!m_flipmode;
 	  if (m_midiout) 
 	    m_midiout->Send(0x90, 0x32,m_flipmode?1:0,-1);
@@ -772,6 +961,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 
 	bool OnGlobal( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnGlobal\n");
+#endif
     g_csurf_mcpmode=!g_csurf_mcpmode;
     if (m_midiout) 
       m_midiout->Send(0x90, 0x33,g_csurf_mcpmode?0x7f:0,-1);
@@ -780,6 +972,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnKeyModifier( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnKeyModifier\n");
+#endif
 	  int mask=(1<<(evt->midi_message[1]-0x46));
 	  if (evt->midi_message[2] >= 0x40)
 	    m_mackie_modifiers|=mask;
@@ -789,6 +984,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnScroll( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnScroll\n");
+#endif
 	  if (evt->midi_message[2]>0x40)
 	    m_mackie_arrow_states |= 1<<(evt->midi_message[1]-0x60);
 	  else
@@ -797,6 +995,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnTouch( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnTouch\n");
+#endif
 	  int fader = evt->midi_message[1]-0x68;
     m_fader_touchstate[fader]=evt->midi_message[2]>=0x7f;
     m_fader_lasttouch[fader]=0xFFFFFFFF; // never use this again!
@@ -804,6 +1005,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 	
 	bool OnFunctionKey( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnFunctionKey\n");
+#endif
     if (!(m_cfg_flags&CONFIG_FLAG_MAPF1F8TOMARKERS)) return false;
 
 	  int fkey = evt->midi_message[1] - 0x36;
@@ -813,6 +1017,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	}
 
 	bool OnSoloButton( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnSoloButton\n");
+#endif
 	  SoloAllTracks(0);
 	  return true;
 	}
@@ -825,6 +1032,9 @@ class CSurf_MF8 : public IReaperControlSurface
 	};
 
 	bool OnButtonPress( MIDI_event_t *evt ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnButtonPress invoked\n");
+#endif
 	  if ( (evt->midi_message[0]&0xf0) != 0x90 )  
 	    return false;
 
@@ -872,6 +1082,14 @@ class CSurf_MF8 : public IReaperControlSurface
 	  
 	  // For these events we only want to track button press
 	  if ( evt->midi_message[2] >= 0x40 ) {
+#ifdef _FLU_DEBUG
+		char debug[256];
+		sprintf(debug, "OnButtonPress track button press 0x%02X 0x%02X\n",
+			evt->midi_message[1],
+			evt->midi_message[2]
+			);
+		ShowConsoleMsg(debug);
+#endif
 	    // Check for double click
 	    DWORD now = timeGetTime();
 	    bool double_click = (int)evt_code == m_button_last && 
@@ -884,13 +1102,20 @@ class CSurf_MF8 : public IReaperControlSurface
 	      ButtonHandler bh = handlers[i];
 	      if ( bh.evt_min <= evt_code && evt_code <= bh.evt_max ) {
 	        // Try double click first
-	        if ( double_click && bh.func_dc != NULL )
-	          if ( (this->*bh.func_dc)(evt) )
-	            return true;
+			  if ( double_click && bh.func_dc != NULL ) {
+				if ( (this->*bh.func_dc)(evt) ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnButtonPress double click function returned TRUE\n");
+#endif
+					return true; }
+			  }
 
 	        // Single click (and unhandled double clicks)
 	        if ( bh.func != NULL )
 	          if ( (this->*bh.func)(evt) ) 
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnButtonPress single click (and unhandled double click) function returned TRUE\n");
+#endif
 	            return true;
 	      }
 	    }
@@ -899,10 +1124,21 @@ class CSurf_MF8 : public IReaperControlSurface
 	  // For these events we want press and release
 	  for ( int i = nPressOnlyHandlers; i < nHandlers; i++ )
       if ( handlers[i].evt_min <= evt_code && evt_code <= handlers[i].evt_max )
-        if ( (this->*handlers[i].func)(evt) ) return true;
+	  {
+		  if ( (this->*handlers[i].func)(evt) ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnButtonPress handler returned TRUE\n");
+#endif
+			  return true;
+		  }
+	  }
+
 
 	  // Pass thru if not otherwise handled
 	  if ( evt->midi_message[2]>=0x40 ) {
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnButtonPress passing through event to kbd_OnMidiEvent\n");
+#endif
 	    int a=evt->midi_message[1];
 	    MIDI_event_t evt={0,3,{0xbf-(m_mackie_modifiers&15),a,0}};
 	    kbd_OnMidiEvent(&evt,-1);
@@ -913,6 +1149,9 @@ class CSurf_MF8 : public IReaperControlSurface
 
     void OnMIDIEvent(MIDI_event_t *evt)
     {
+#ifdef _FLU_DEBUG
+//		ShowConsoleMsg("OnMIDIEvent\n");
+#endif
         #if 0
         char buf[512];
         sprintf(buf,"message %02x, %02x, %02x\n",evt->midi_message[0],evt->midi_message[1],evt->midi_message[2]);
@@ -1034,7 +1273,7 @@ public:
     const char *GetTypeString() { return m_is_mf8ex ? "MF8EX" : "MF8"; }
     const char *GetDescString()
     {
-      m_descspace.Set(m_is_mf8ex ? "Mackie Control Extended FLU" : "Mackie Control FLU");
+      m_descspace.Set(m_is_mf8ex ? "Mackie Control Extended MF8" : "Samson Graphite MF8 based on MCU");
       char tmp[512];
       sprintf(tmp," (dev %d,%d)",m_midi_in_dev,m_midi_out_dev);
       m_descspace.Append(tmp);
@@ -1606,6 +1845,9 @@ public:
     
     void OnTrackSelection(MediaTrack *trackid) 
     { 
+#ifdef _FLU_DEBUG
+		ShowConsoleMsg("OnTrackSelection\n");
+#endif
       int tid=CSurf_TrackToID(trackid,g_csurf_mcpmode);
       // if no normal MF8's here, then slave it
       int x;

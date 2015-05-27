@@ -22,6 +22,7 @@ extern midi_Input *(*CreateMIDIInput)(int dev);
 extern midi_Output *(*CreateMIDIOutput)(int dev, bool streamMode, int *msoffset100); 
 extern bool (*GetMIDIOutputName)(int dev, char *nameout, int nameoutlen);
 extern bool (*GetMIDIInputName)(int dev, char *nameout, int nameoutlen);
+extern void (*ShowConsoleMsg)(const char *msg);
 
 
 extern int (*CSurf_TrackToID)(MediaTrack *track, bool mcpView);

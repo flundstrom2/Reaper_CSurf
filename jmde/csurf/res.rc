@@ -98,7 +98,7 @@ BEGIN
     CONTROL         "Ignore fader moves when fader is not being touched",
                     IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,4,67,
                     177,10
-    CONTROL         "Map F1-F8 to go to markers",IDC_CHECK2,"Button",
+    CONTROL         "Map F1-F5 to go to markers",IDC_CHECK2,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,4,78,102,10
 END
 

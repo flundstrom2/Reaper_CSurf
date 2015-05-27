@@ -21,6 +21,7 @@ double (*DB2SLIDER)(double x);
 double (*SLIDER2DB)(double y);
 int (*GetNumMIDIInputs)(); 
 int (*GetNumMIDIOutputs)();
+void (*ShowConsoleMsg)(const char *);
 midi_Input *(*CreateMIDIInput)(int dev);
 midi_Output *(*CreateMIDIOutput)(int dev, bool streamMode, int *msoffset100); 
 bool (*GetMIDIOutputName)(int dev, char *nameout, int nameoutlen);
@@ -211,7 +212,9 @@ REAPER_PLUGIN_DLL_EXPORT int REAPER_PLUGIN_ENTRYPOINT(REAPER_PLUGIN_HINSTANCE hI
   IMPAPI(TrackFX_GetFXName)
   
   IMPAPI(GetTrackGUID)
-  
+
+  IMPAPI(ShowConsoleMsg)
+
   void * (*get_config_var)(const char *name, int *szout); 
   int (*projectconfig_var_getoffs)(const char *name, int *szout);
   IMPAPI(get_config_var);
