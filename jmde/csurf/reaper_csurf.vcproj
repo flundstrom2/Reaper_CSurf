@@ -264,6 +264,10 @@
 				Name="csurfs"
 				>
 				<File
+					RelativePath=".\csurf_launchcontrol_xl.cpp"
+					>
+				</File>
+				<File
 					RelativePath=".\csurf_mf8.cpp"
 					>
 					<FileConfiguration
@@ -282,6 +286,14 @@
 							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
+				</File>
+				<File
+					RelativePath=".\TrackFromGUID.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\TrackFromGUID.h"
+					>
 				</File>
 			</Filter>
 		</Filter>

@@ -102,6 +102,30 @@ BEGIN
                     BS_AUTOCHECKBOX | WS_TABSTOP,4,78,102,10
 END
 
+IDD_SURFACEEDIT_LAUNCHCONTROL_XL1 DIALOG DISCARDABLE  0, 0, 268, 95
+STYLE DS_CENTER | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    RTEXT           "MIDI input:",IDC_STATIC,23,6,56,8
+    COMBOBOX        IDC_COMBO2,81,4,181,105,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    RTEXT           "MIDI output:",IDC_STATIC,23,23,56,8
+    COMBOBOX        IDC_COMBO3,81,21,181,105,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    RTEXT           "Surface offset (tracks):",IDC_EDIT1_LBL,4,37,72,8
+    EDITTEXT        IDC_EDIT1,81,36,24,12,ES_AUTOHSCROLL
+    RTEXT           "Size tweak:",IDC_EDIT2_LBL,30,53,47,8
+    EDITTEXT        IDC_EDIT2,80,50,24,12,ES_AUTOHSCROLL
+    LTEXT           "(leave at 9 unless you know what you're doing)",
+                    IDC_EDIT2_LBL2,108,52,148,8
+    CONTROL         "Ignore fader moves when fader is not being touched",
+                    IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,4,67,
+                    177,10
+    CONTROL         "Map F1-F5 to go to markers",IDC_CHECK2,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,4,78,102,10
+END
+
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // DESIGNINFO
