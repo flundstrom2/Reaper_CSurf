@@ -70,10 +70,14 @@ typedef enum {
 #define LED_COLOR_MUTE   LED_COLOR_YELLOW_FULL
 #define LED_COLOR_SOLO   LED_COLOR_YELLOW_FULL
 #define LED_COLOR_ARM    LED_COLOR_YELLOW_FULL
+#define LED_COLOR_DEVICE LED_COLOR_YELLOW_FULL
 
-// RED doesn't work
-// AMBER, YELLOW, GREEN works, but no visible difference from AMBER
-#define LED_COLOR_DEVICE LED_COLOR_GREEN_FULL
+#define LED_TRACK_CONTROL_MUTE_ON	LED_COLOR_AMBER_FULL
+#define LED_TRACK_CONTROL_MUTE_OFF	LED_COLOR_AMBER_LOW
+#define LED_TRACK_CONTROL_SOLO_ON	LED_COLOR_GREEN_FULL
+#define LED_TRACK_CONTROL_SOLO_OFF	LED_COLOR_GREEN_LOW
+#define LED_TRACK_CONTROL_ARM_ON	LED_COLOR_RED_FULL
+#define LED_TRACK_CONTROL_ARM_OFF	LED_COLOR_RED_LOW
 
 const char *g_led_names[] = {
 	"SEND_A_1",
@@ -388,41 +392,63 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
     }
 
 
-const char *LaunchControl_XLGetLedName(led_e led) 
-{
-	return (led < LED_LAST ? g_led_names[led] : "INVALID LED #");
-}
-
-void LaunchControl_XLSetLedColor(led_e led, char color)
-{
-	ShowConsoleMsgF("LauncControl_XLSetLedColor led=0x%2X (%s) color=0x%02X\n",
-		led,
-		LaunchControl_XLGetLedName(led),
-		color);
-
-	// Set LED color
-	struct
+	const char *LaunchControl_XLGetLedName(led_e led) 
 	{
-	  MIDI_event_t evt;
-	  char data[11];
+		return (led < LED_LAST ? g_led_names[led] : "INVALID LED #");
 	}
-	poo;
-	poo.evt.frame_offset=0;
-	poo.evt.size=11;
-	poo.evt.midi_message[0]=0xF0;
-	poo.evt.midi_message[1]=0x00;
-	poo.evt.midi_message[2]=0x20;
-	poo.evt.midi_message[3]=0x29;
-	poo.evt.midi_message[4]=0x02;
-	poo.evt.midi_message[5]=0x11;
-	poo.evt.midi_message[6]=0x78;
-	poo.evt.midi_message[7]=0x08;
-	poo.evt.midi_message[8]=led;
-	poo.evt.midi_message[9]=color;
-	poo.evt.midi_message[10]=0xF7;
-	Sleep(5);
-	m_midiout->SendMsg(&poo.evt,-1);
-}
+
+	void LaunchControl_XLSetLedColor(led_e led, char color)
+	{
+		ShowConsoleMsgF("LauncControl_XLSetLedColor led=0x%2X (%s) color=0x%02X\n",
+			led,
+			LaunchControl_XLGetLedName(led),
+			color);
+
+		// Set LED color
+		struct
+		{
+		  MIDI_event_t evt;
+		  char data[11];
+		}
+		poo;
+		poo.evt.frame_offset=0;
+		poo.evt.size=11;
+		poo.evt.midi_message[0]=0xF0;
+		poo.evt.midi_message[1]=0x00;
+		poo.evt.midi_message[2]=0x20;
+		poo.evt.midi_message[3]=0x29;
+		poo.evt.midi_message[4]=0x02;
+		poo.evt.midi_message[5]=0x11;
+		poo.evt.midi_message[6]=0x78;
+		poo.evt.midi_message[7]=0x08;
+		poo.evt.midi_message[8]=led;
+		poo.evt.midi_message[9]=color;
+		poo.evt.midi_message[10]=0xF7;
+		Sleep(5);
+		m_midiout->SendMsg(&poo.evt,-1);
+	}
+
+	void LaunchControl_XLSetTrackControlStripColor(char color)
+	{
+		int min =  m_offset+m_alllaunchcontrol_xls_bank_offset;
+		int max = m_offset+m_alllaunchcontrol_xls_bank_offset + m_size-1;
+		ShowConsoleMsgF("LaunchControl_XLSetTrackControlStripColor: min=%d max=%d color=0x%02X\n",
+				  min,
+				  max,
+				  color);
+		for(int id = 0; id < 256; id++) {
+		  if(id >= min && id < max) {
+			  int tid = id - m_offset+m_alllaunchcontrol_xls_bank_offset;
+			  led_e led = (led_e)(LED_TRACK_CONTROL_1 + tid);
+			  ShowConsoleMsgF("LaunchControl_XLSetTrackControlStripColor: id=%d tid=%d led=%d (%s)\n",
+				  id, 
+				  tid,
+				  led,
+				  g_led_names[led]);
+			  LaunchControl_XLSetLedColor(led, color);
+		  }
+		}
+	}
 
 	void LaunchControl_XLSetTrackControlState(TrackControlState_e track_control_state)
 	{
@@ -444,14 +470,23 @@ void LaunchControl_XLSetLedColor(led_e led, char color)
 					case (TRACKCONTROLSTATE_MUTE):
 						color = (m_track_control_state == stateidx ? LED_COLOR_MUTE : LED_COLOR_OFF);
 						LaunchControl_XLSetLedColor(LED_MUTE, color);
+						if(m_track_control_state == stateidx) {
+							LaunchControl_XLSetTrackControlStripColor(LED_TRACK_CONTROL_MUTE_ON);
+						}
 						break;
 					case (TRACKCONTROLSTATE_SOLO):
 						color = (m_track_control_state == stateidx ? LED_COLOR_SOLO : LED_COLOR_OFF);
 						LaunchControl_XLSetLedColor(LED_SOLO, color);
+						if(m_track_control_state == stateidx) {
+							LaunchControl_XLSetTrackControlStripColor(LED_TRACK_CONTROL_SOLO_ON);
+						}
 						break;
 					case (TRACKCONTROLSTATE_ARM):
 						color = (m_track_control_state == stateidx ? LED_COLOR_ARM : LED_COLOR_OFF);
 						LaunchControl_XLSetLedColor(LED_ARM, color);
+						if(m_track_control_state == stateidx) {
+							LaunchControl_XLSetTrackControlStripColor(LED_TRACK_CONTROL_ARM_ON);
+						}
 						break;
 				}
 			}
@@ -1315,7 +1350,7 @@ void LaunchControl_XLSetLedColor(led_e led, char color)
 
 public:
 
-    CSurf_LaunchControl_XL(int offset, int size, int indev, int outdev, int cfgflags, int *errStats) 
+	CSurf_LaunchControl_XL(int offset, int size, int indev, int outdev, int cfgflags, int *errStats) 
     {
 		ShowConsoleMsgF("CSurf_LaunchControl_XL offset=%d size=%d indev=%d outdev=%d cfgflags=0x08X\n",
 			offset, size, indev, outdev, cfgflags);
@@ -1793,16 +1828,19 @@ public:
       FIXID(id)
       if (m_midiout && id>=0 && id < 256 && id < m_size)
       {
-	    ShowConsoleMsgF("SetSurfaceMute id=%d mute=%s\n", id,
+	    ShowConsoleMsgF("SetSurfaceMute id=%d mute=%s\n",
+			id,
 			(mute ? "MUTE" : "unmute"));
-		if(m_track_muted[id] != mute)
+		if(m_track_muted[id] != mute) {
+			m_track_muted[id] = mute;
 			LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_MUTE);
-		m_track_muted[id] = mute;
-
+		}
+#if 0
 	    if (id<8) {
           m_midiout->Send(0x90, 0x08+(id&7),mute?0x7f:0,-1); // MF8 differs from MCU documentation
 		  return;
 	    }
+#endif
       }     
       ShowConsoleMsgF("SetSurfaceMute ignored\n");
     }
@@ -1886,14 +1924,17 @@ public:
         ShowConsoleMsgF("SetSurfaceSolo id=%d solo=%s\n",
 			id,
 			(solo ? "SOLO" : "unsolo"));
-		if(m_track_soloed[id] != solo)
+		if(m_track_soloed[id] != solo) {
+			m_track_soloed[id] = solo;
 			LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_SOLO);
-		m_track_soloed[id] = solo;
+		}
 
-        if (id < 8)
+		if (id < 8) {
+#if 0
           //m_midiout->Send(0x90, 0x08+(id&7),solo?1:0,-1); //blink (doesn't work on MF8), also MF8 SOLO differs from MCU documentation
           m_midiout->Send(0x90, 0x10+(id&7),solo?0x7f:0,-1);
-        else if (id == 8) {
+#endif
+		} else if (id == 8) {
           // Hmm, seems to call this with id 8 to tell if any
           // tracks are soloed.
 
@@ -1916,13 +1957,16 @@ public:
         ShowConsoleMsgF("SetSurfaceArm id=%d arm=%s\n",
 			id,
 			(recarm ? "ARM" : "unarm"));
-		if(m_track_armed[id] != recarm)
+		if(m_track_armed[id] != recarm) {
+			m_track_armed[id] = recarm;
 			LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_ARM);
-		m_track_armed[id] = recarm;
+		}
+#if 0
         if (id < 8)
         {
           m_midiout->Send(0x90, 0x0+(id&7),recarm?0x7f:0,-1);
         }
+#endif
       }
     }
     void SetPlayState(bool play, bool pause, bool rec) 
