@@ -12,8 +12,11 @@
 #include "../../WDL/ptrlist.h"
 #include "TrackFromGUID.h"
 
+#ifdef _DEBUG
 #define _FLU_DEBUG
+#endif
 //#define _FLU_DEBUG_ONMIDIEVENT
+//#define _FLU_DEBUG_ONFADERMOVE
 
 #ifdef _FLU_DEBUG
 static void ShowConsoleMsgF(const char *fmt, ...)
@@ -371,7 +374,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
 	  if (volume_fader_move || pan_fader_move) // volume fader move
       {
-		  /*
+#ifdef _FLU_DEBUG_ONFADERMOVE
 	  ShowConsoleMsgF("OnFaderMove %s tid=%u (tidc=%u) %s=%f\n", 
 		  (volume_fader_move ? "VOLUME" : "PAN   "),
 		  tid,
@@ -379,7 +382,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		  (volume_fader_move ? "vollvl" : "panlvl"),
 		  (volume_fader_move ? vollvl : panlvl)
 		  );
-	  */
+#endif
         m_fader_lastmove = timeGetTime();
 
         if (tid>=0&&tid<9 && m_fader_lasttouch[tid]!=0xffffffff)
@@ -391,7 +394,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
         {
           if ( (m_cfg_flags&CONFIG_FLAG_FADER_TOUCH_MODE) && !GetTouchState(tr) ) {
             m_repos_faders = true;
+#ifdef _FLU_DEBUG_ONFADERMOVE
 			ShowConsoleMsgF("OnFaderMove CONFIG_FLAG_FADER_TOUCH_MODE enabled, skipping\n");
+#endif
           }
           else if ((m_flipmode && volume_fader_move) || (!m_flipmode && pan_fader_move))
           {
@@ -408,12 +413,14 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		}
         return true;
 	  } else {
+#ifdef _FLU_DEBUG_ONFADERMOVE
 	    ShowConsoleMsgF("OnFaderMove %s tid=%u (tidc=%u) lvl=%f (CURRENTLY IGNORED)\n", 
 		  (volume_fader_move ? "SEND A" : "SEND B"),
 		  tid,
 		  tidc,
 		  panlvl
 		  );
+#endif
 		return true; // Simply ignore so far...
 	  }
       return false;
@@ -1116,7 +1123,11 @@ public:
     const char *GetTypeString() { return m_is_launchcontrol_xlex ? "LAUNCHCONTROL_XLEX" : "LAUNCHCONTROL_XL"; }
     const char *GetDescString()
     {
-      m_descspace.Set(m_is_launchcontrol_xlex ? "Mackie Control Extended Novation LaunchControl XL" : "Novation LaunchControl XL");
+#ifdef _FLU_DEBUG
+	  m_descspace.Set(m_is_launchcontrol_xlex ? "Mackie Control Extended Novation LaunchControl XL (Debug)" : "Novation LaunchControl XL (Debug)");
+#else
+	  m_descspace.Set(m_is_launchcontrol_xlex ? "Mackie Control Extended Novation LaunchControl XL" : "Novation LaunchControl XL");
+#endif
       char tmp[512];
       sprintf(tmp," (dev %d,%d)",m_midi_in_dev,m_midi_out_dev);
       m_descspace.Append(tmp);
@@ -1868,8 +1879,13 @@ static HWND configFunc(const char *type_string, HWND parent, const char *initCon
 
 reaper_csurf_reg_t csurf_launchcontrol_xl_reg = 
 {
+#ifdef _FLU_DEBUG
+  "LAUNCHCONTROL_XL_DEBUG",
+  "Novation LaunchControl XL (Debug)",
+#else
   "LAUNCHCONTROL_XL",
   "Novation LaunchControl XL",
+#endif
   createFunc,
   configFunc,
 };

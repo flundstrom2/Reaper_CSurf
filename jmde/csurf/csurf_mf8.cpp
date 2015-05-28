@@ -12,7 +12,9 @@
 #include "../../WDL/ptrlist.h"
 #include "TrackFromGUID.h"
 
+#ifdef _DEBUG
 #define _FLU_DEBUG
+#endif
 
 #ifdef _FLU_DEBUG
 static void ShowConsoleMsgF(const char *fmt, ...)
@@ -1171,7 +1173,11 @@ public:
     const char *GetTypeString() { return m_is_mf8ex ? "MF8EX" : "MF8"; }
     const char *GetDescString()
     {
+#ifdef _FLU_DEBUG
+      m_descspace.Set(m_is_mf8ex ? "Mackie Control Extended MF8 (Debug)" : "Samson Graphite MF8 based on MCU (Debug)");
+#else
       m_descspace.Set(m_is_mf8ex ? "Mackie Control Extended MF8" : "Samson Graphite MF8 based on MCU");
+#endif
       char tmp[512];
       sprintf(tmp," (dev %d,%d)",m_midi_in_dev,m_midi_out_dev);
       m_descspace.Append(tmp);
@@ -1923,15 +1929,25 @@ static HWND configFunc(const char *type_string, HWND parent, const char *initCon
 
 reaper_csurf_reg_t csurf_mf8_reg = 
 {
+#ifdef _FLU_DEBUG
+  "MF8_DEBUG",
+  "Samson Graphite MF8 (MCU) (Debug)",
+#else
   "MF8",
   "Samson Graphite MF8 (MCU)",
+#endif
   createFunc,
   configFunc,
 };
 reaper_csurf_reg_t csurf_mf8ex_reg = 
 {
+#ifdef _FLU_DEBUG
+  "MF8_DEBUG",
+  "Samson Graphite MF8 (MCE) (Debug)",
+#else
   "MF8EX",
   "Samson Graphite MF8 (MCE)",
+#endif
   createFunc,
   configFunc,
 };
