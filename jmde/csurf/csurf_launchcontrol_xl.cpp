@@ -15,7 +15,7 @@
 #ifdef _DEBUG
 #define _FLU_DEBUG
 #endif
-//#define _FLU_DEBUG_ONMIDIEVENT
+#define _FLU_DEBUG_ONMIDIEVENT
 //#define _FLU_DEBUG_ONFADERMOVE
 
 #ifdef _FLU_DEBUG
@@ -167,7 +167,6 @@ struct SelectedTrack {
 
 class CSurf_LaunchControl_XL : public IReaperControlSurface
 {
-    bool m_is_launchcontrol_xlex;
     int m_midi_in_dev,m_midi_out_dev;
     int m_offset, m_size; // Size seems to be related to maximum number of strips on the MCU.
     midi_Output *m_midiout;
@@ -241,20 +240,49 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
       if (m_midiout)
       {
-        if (!m_is_launchcontrol_xlex)
-        {
-          m_midiout->Send(0x90, 0x32,m_flipmode?1:0,-1);
-          m_midiout->Send(0x90, 0x33,g_csurf_mcpmode?0x7f:0,-1);
-    
-          m_midiout->Send(0x90, 0x64,(m_mackie_arrow_states&64)?0x7f:0,-1);
-          m_midiout->Send(0x90, 0x65,(m_mackie_arrow_states&128)?0x7f:0,-1);
+		// Reset templates (Only factory templates, keep user templates)
+		for (int tidx = 8; tidx < 16; tidx++) {
+		  m_midiout->Send(0xB0 + tidx, 0x00, 0x00, -1); 
+		}
 
-          m_midiout->Send(0xB0,0x40+11,'0'+(((m_alllaunchcontrol_xls_bank_offset+1)/10)%10),-1);
-          m_midiout->Send(0xB0,0x40+10,'0'+((m_alllaunchcontrol_xls_bank_offset+1)%10),-1);
-        }
+		// Select template
+		struct
+		{
+		  MIDI_event_t evt;
+		  char data[9];
+		}
+		poo;
+		poo.evt.frame_offset=0;
+		poo.evt.size=9;
+		poo.evt.midi_message[0]=0xF0;
+		poo.evt.midi_message[1]=0x00;
+		poo.evt.midi_message[2]=0x20;
+		poo.evt.midi_message[3]=0x29;
+		poo.evt.midi_message[4]=0x02;
+		poo.evt.midi_message[5]=0x11;
+		poo.evt.midi_message[6]=0x77;
+		poo.evt.midi_message[7]=0x08; // Factory Template 1.
+		poo.evt.midi_message[8]=0xF7;
+		Sleep(5);
+		m_midiout->SendMsg(&poo.evt,-1);
+#if 0
+
+		m_midiout->Send(0x90, 0x32,m_flipmode?1:0,-1); // flip button
+		m_midiout->Send(0x90, 0x33,g_csurf_mcpmode?0x7f:0,-1); // global view button
+
+		m_midiout->Send(0x90, 0x64,(m_mackie_arrow_states&64)?0x7f:0,-1); // zoom button
+		m_midiout->Send(0x90, 0x65,(m_mackie_arrow_states&128)?0x7f:0,-1); // scrub button
+
+		m_midiout->Send(0xB0,0x40+11,'0'+(((m_alllaunchcontrol_xls_bank_offset+1)/10)%10),-1); // Right to left of LEDs
+		m_midiout->Send(0xB0,0x40+10,'0'+((m_alllaunchcontrol_xls_bank_offset+1)%10),-1); // Right to left of LEDs
+#endif
+#if 0
 
         UpdateMackieDisplay(0,SPLASH_MESSAGE,56*2);
+#endif
 
+#if 0
+		// Put tracks in meter mode
         int x;
         for (x = 0; x < 8; x ++)
         {
@@ -270,7 +298,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
           poo.evt.midi_message[1]=0x00;
           poo.evt.midi_message[2]=0x00;
           poo.evt.midi_message[3]=0x66;
-          poo.evt.midi_message[4]=m_is_launchcontrol_xlex ? 0x15 : 0x14;
+          poo.evt.midi_message[4]=0x14;
           poo.evt.midi_message[5]=0x20;
           poo.evt.midi_message[6]=0x00+x;
           poo.evt.midi_message[7]=0x03;
@@ -279,14 +307,19 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
           m_midiout->SendMsg(&poo.evt,-1);
         }
         Sleep(5);
+#endif 
+#if 0
+		// Update VU meter
         for (x = 0; x < 8; x ++)
         {
           m_midiout->Send(0xD0,(x<<4)|0xF,0,-1);
         }
+#endif
       }
 
     }
 
+#if 0
 
     void UpdateMackieDisplay(int pos, const char *text, int pad)
     {
@@ -302,7 +335,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
       poo.evt.midi_message[poo.evt.size++]=0x00;
       poo.evt.midi_message[poo.evt.size++]=0x00;
       poo.evt.midi_message[poo.evt.size++]=0x66;
-      poo.evt.midi_message[poo.evt.size++]=m_is_launchcontrol_xlex ? 0x15 :  0x14;
+      poo.evt.midi_message[poo.evt.size++]=0x14;
       poo.evt.midi_message[poo.evt.size++]=0x12;
 
       poo.evt.midi_message[poo.evt.size++]=pos;
@@ -321,12 +354,13 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
       Sleep(5);
       m_midiout->SendMsg(&poo.evt,-1);
     }
+#endif
 
     typedef bool (CSurf_LaunchControl_XL::*MidiHandlerFunc)(MIDI_event_t*);
     
     bool OnLaunchControl_XLReset(MIDI_event_t *evt) {
       unsigned char onResetMsg[]={0xf0,0x00,0x00,0x66,0x14,0x01,0x58,0x59,0x5a,};
-      onResetMsg[4]=m_is_launchcontrol_xlex ? 0x15 : 0x14; 
+      onResetMsg[4]=0x14; 
       if (evt->midi_message[0]==0xf0 && evt->size >= sizeof(onResetMsg) && !memcmp(evt->midi_message,onResetMsg,sizeof(onResetMsg)))
       {
         // on reset
@@ -590,7 +624,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  for (x = 0; x < m_launchcontrol_xl_list.GetSize(); x ++)
 	  {
 	    CSurf_LaunchControl_XL *item=m_launchcontrol_xl_list.Get(x);
-	    if (item && !item->m_is_launchcontrol_xlex && item->m_midiout)
+	    if (item && item->m_midiout)
 	    {
 	      item->m_midiout->Send(0xB0,0x40+11,'0'+(((m_alllaunchcontrol_xls_bank_offset+1)/10)%10),-1);
 	      item->m_midiout->Send(0xB0,0x40+10,'0'+((m_alllaunchcontrol_xls_bank_offset+1)%10),-1);
@@ -1022,13 +1056,14 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
 public:
 
-    CSurf_LaunchControl_XL(bool islaunchcontrol_xlex, int offset, int size, int indev, int outdev, int cfgflags, int *errStats) 
+    CSurf_LaunchControl_XL(int offset, int size, int indev, int outdev, int cfgflags, int *errStats) 
     {
+		ShowConsoleMsgF("CSurf_LaunchControl_XL offset=%d size=%d indev=%d outdev=%d cfgflags=0x08X\n",
+			offset, size, indev, outdev, cfgflags);
       m_cfg_flags=cfgflags;
 
       m_launchcontrol_xl_list.Add(this);
 
-      m_is_launchcontrol_xlex=islaunchcontrol_xlex; 
       m_offset=offset;
       m_size=size;
       m_midi_in_dev=indev;
@@ -1085,7 +1120,7 @@ public:
         poo.evt.midi_message[1]=0x00;
         poo.evt.midi_message[2]=0x00;
         poo.evt.midi_message[3]=0x66;
-        poo.evt.midi_message[4]=m_is_launchcontrol_xlex ? 0x15 : 0x14;
+        poo.evt.midi_message[4]=0x14;
         poo.evt.midi_message[5]=0x08;
         poo.evt.midi_message[6]=0x00;
         poo.evt.midi_message[7]=0xF7;
@@ -1120,13 +1155,13 @@ public:
 
 
 
-    const char *GetTypeString() { return m_is_launchcontrol_xlex ? "LAUNCHCONTROL_XLEX" : "LAUNCHCONTROL_XL"; }
+    const char *GetTypeString() { return "LAUNCHCONTROL_XL"; }
     const char *GetDescString()
     {
 #ifdef _FLU_DEBUG
-	  m_descspace.Set(m_is_launchcontrol_xlex ? "Mackie Control Extended Novation LaunchControl XL (Debug)" : "Novation LaunchControl XL (Debug)");
+	  m_descspace.Set("Novation LaunchControl XL (Debug)");
 #else
-	  m_descspace.Set(m_is_launchcontrol_xlex ? "Mackie Control Extended Novation LaunchControl XL" : "Novation LaunchControl XL");
+	  m_descspace.Set("Novation LaunchControl XL");
 #endif
       char tmp[512];
       sprintf(tmp," (dev %d,%d)",m_midi_in_dev,m_midi_out_dev);
@@ -1163,8 +1198,6 @@ public:
         
         if (m_midiout)
         {
-          if (!m_is_launchcontrol_xlex)
-          {
             double pp=(GetPlayState()&1) ? GetPlayPosition() : GetCursorPosition();
             unsigned char bla[10];
       //      bla[-2]='A';//first char of assignment
@@ -1310,7 +1343,6 @@ public:
 
             // 0xD0 = level meter, hi nibble = channel index, low = level (F=clip, E=top)
       //      m_midiout->Send(0xD0,0x1E,0);
-          }
           if (GetPlayState()&1)
           {
             int x;
@@ -1414,7 +1446,9 @@ public:
             m_midiout->Send(0x90, 0x0+(x&7),0,-1); // reset recarm
 
             char buf[7]={0,};       
+#if 0
             UpdateMackieDisplay(x*7,buf,7); // clear display
+#endif
 
             struct
             {
@@ -1428,7 +1462,7 @@ public:
             poo.evt.midi_message[1]=0x00;
             poo.evt.midi_message[2]=0x00;
             poo.evt.midi_message[3]=0x66;
-            poo.evt.midi_message[4]=m_is_launchcontrol_xlex ? 0x15 : 0x14;
+            poo.evt.midi_message[4]=0x14;
             poo.evt.midi_message[5]=0x20;
             poo.evt.midi_message[6]=0x00+x;
             poo.evt.midi_message[7]=0x03;
@@ -1615,7 +1649,7 @@ public:
     }
     void SetPlayState(bool play, bool pause, bool rec) 
     { 
-      if (m_midiout && !m_is_launchcontrol_xlex)
+      if (m_midiout)
       {
         m_midiout->Send(0x90, 0x5f,rec?0x7f:0,-1);
         m_midiout->Send(0x90, 0x5e,play||pause?0x7f:0,-1);
@@ -1624,13 +1658,14 @@ public:
     }
     void SetRepeatState(bool rep) 
     {
-      if (m_midiout && !m_is_launchcontrol_xlex)
+      if (m_midiout)
       {
         m_midiout->Send(0x90, 0x56,rep?0x7f:0,-1);
       }
       
     }
 
+#if 0
     void SetTrackTitle(MediaTrack *trackid, const char *title) 
     {
       FIXID(id)
@@ -1649,6 +1684,7 @@ public:
         UpdateMackieDisplay(id*7,buf,7);
       }
     }
+#endif
     bool GetTouchState(MediaTrack *trackid, int isPan=0)
     {
       FIXID(id)
@@ -1685,7 +1721,7 @@ public:
     }
 
     void UpdateAutoModes() {
-      if ( m_midiout && !m_is_launchcontrol_xlex ) {
+      if ( m_midiout) {
         int modes[5] = { 0, 0, 0, 0, 0 };
         for ( SelectedTrack *i = m_selected_tracks; i; i = i->next ) {
           MediaTrack *track = i->track();
@@ -1739,7 +1775,7 @@ public:
           for (x = 0; x < m_launchcontrol_xl_list.GetSize(); x ++)
           {
             CSurf_LaunchControl_XL *launchcontrol_xl=m_launchcontrol_xl_list.Get(x);
-            if (launchcontrol_xl && !launchcontrol_xl->m_is_launchcontrol_xlex && launchcontrol_xl->m_midiout)
+            if (launchcontrol_xl && launchcontrol_xl->m_midiout)
             {
               launchcontrol_xl->m_midiout->Send(0xB0,0x40+11,'0'+(((m_alllaunchcontrol_xls_bank_offset+1)/10)%10),-1);
               launchcontrol_xl->m_midiout->Send(0xB0,0x40+10,'0'+((m_alllaunchcontrol_xls_bank_offset+1)%10),-1);
@@ -1751,7 +1787,7 @@ public:
     
     bool IsKeyDown(int key) 
     { 
-      if (m_midiin && !m_is_launchcontrol_xlex)
+      if (m_midiin)
       {
         if (key == VK_SHIFT) return !!(m_mackie_modifiers&1);
         if (key == VK_CONTROL) return !!(m_mackie_modifiers&4);
@@ -1788,7 +1824,7 @@ static IReaperControlSurface *createFunc(const char *type_string, const char *co
   int parms[5];
   parseParms(configString,parms);
 
-  return new CSurf_LaunchControl_XL(!strcmp(type_string,"LAUNCHCONTROL_XLEX"),parms[0],parms[1],parms[2],parms[3],parms[4],errStats);
+  return new CSurf_LaunchControl_XL(parms[0],parms[1],parms[2],parms[3],parms[4],errStats);
 }
 
 
