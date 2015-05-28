@@ -1795,8 +1795,9 @@ public:
       {
 	    ShowConsoleMsgF("SetSurfaceMute id=%d mute=%s\n", id,
 			(mute ? "MUTE" : "unmute"));
-		if(mute)
+		if(m_track_muted[id] != mute)
 			LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_MUTE);
+		m_track_muted[id] = mute;
 
 	    if (id<8) {
           m_midiout->Send(0x90, 0x08+(id&7),mute?0x7f:0,-1); // MF8 differs from MCU documentation
@@ -1885,8 +1886,9 @@ public:
         ShowConsoleMsgF("SetSurfaceSolo id=%d solo=%s\n",
 			id,
 			(solo ? "SOLO" : "unsolo"));
-		if(solo)
+		if(m_track_soloed[id] != solo)
 			LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_SOLO);
+		m_track_soloed[id] = solo;
 
         if (id < 8)
           //m_midiout->Send(0x90, 0x08+(id&7),solo?1:0,-1); //blink (doesn't work on MF8), also MF8 SOLO differs from MCU documentation
@@ -1902,6 +1904,9 @@ public:
         }
       }
     }
+	bool m_track_armed[256];
+	bool m_track_soloed[256];
+	bool m_track_muted[256];
 
     void SetSurfaceRecArm(MediaTrack *trackid, bool recarm) 
     { 
@@ -1911,8 +1916,9 @@ public:
         ShowConsoleMsgF("SetSurfaceArm id=%d arm=%s\n",
 			id,
 			(recarm ? "ARM" : "unarm"));
-		if(recarm)
+		if(m_track_armed[id] != recarm)
 			LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_ARM);
+		m_track_armed[id] = recarm;
         if (id < 8)
         {
           m_midiout->Send(0x90, 0x0+(id&7),recarm?0x7f:0,-1);
