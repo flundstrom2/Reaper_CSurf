@@ -33,7 +33,7 @@ static void ShowConsoleMsgF(const char *fmt, ...)
 #endif
 
 
-// Mute buttons			amber+green when muted, amber when not muted
+// Mute buttons			Amber
 // Solo buttons			Green
 // Record ARM buttons	Red
 
@@ -428,24 +428,29 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		m_midiout->SendMsg(&poo.evt,-1);
 	}
 
-	void LaunchControl_XLSetTrackControlStripColor(char color)
+	void LaunchControl_XLSetTrackControlStripColor(const bool states[256], char oncolor, char offcolor)
 	{
 		int min =  m_offset+m_alllaunchcontrol_xls_bank_offset;
 		int max = m_offset+m_alllaunchcontrol_xls_bank_offset + m_size-1;
-		ShowConsoleMsgF("LaunchControl_XLSetTrackControlStripColor: min=%d max=%d color=0x%02X\n",
+		ShowConsoleMsgF("LaunchControl_XLSetTrackControlStripColor: min=%d max=%d oncolor=0x%02X offcolor=0x%02X\n",
 				  min,
 				  max,
-				  color);
+				  oncolor, offcolor);
 		for(int id = 0; id < 256; id++) {
 		  if(id >= min && id < max) {
 			  int tid = id - m_offset+m_alllaunchcontrol_xls_bank_offset;
 			  led_e led = (led_e)(LED_TRACK_CONTROL_1 + tid);
-			  ShowConsoleMsgF("LaunchControl_XLSetTrackControlStripColor: id=%d tid=%d led=%d (%s)\n",
+			  ShowConsoleMsgF("LaunchControl_XLSetTrackControlStripColor: id=%d tid=%d led=%d (%s), state=%s\n",
 				  id, 
 				  tid,
 				  led,
-				  g_led_names[led]);
-			  LaunchControl_XLSetLedColor(led, color);
+				  g_led_names[led],
+				  (states[id] ? "ON" : "off"));
+			  if (states[id]) {
+				LaunchControl_XLSetLedColor(led, oncolor);
+			  } else {
+				LaunchControl_XLSetLedColor(led, offcolor);
+			  }
 		  }
 		}
 	}
@@ -471,21 +476,21 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 						color = (m_track_control_state == stateidx ? LED_COLOR_MUTE : LED_COLOR_OFF);
 						LaunchControl_XLSetLedColor(LED_MUTE, color);
 						if(m_track_control_state == stateidx) {
-							LaunchControl_XLSetTrackControlStripColor(LED_TRACK_CONTROL_MUTE_ON);
+							LaunchControl_XLSetTrackControlStripColor(m_track_muted, LED_TRACK_CONTROL_MUTE_ON, LED_TRACK_CONTROL_MUTE_OFF);
 						}
 						break;
 					case (TRACKCONTROLSTATE_SOLO):
 						color = (m_track_control_state == stateidx ? LED_COLOR_SOLO : LED_COLOR_OFF);
 						LaunchControl_XLSetLedColor(LED_SOLO, color);
 						if(m_track_control_state == stateidx) {
-							LaunchControl_XLSetTrackControlStripColor(LED_TRACK_CONTROL_SOLO_ON);
+							LaunchControl_XLSetTrackControlStripColor(m_track_soloed, LED_TRACK_CONTROL_SOLO_ON, LED_TRACK_CONTROL_SOLO_OFF);
 						}
 						break;
 					case (TRACKCONTROLSTATE_ARM):
 						color = (m_track_control_state == stateidx ? LED_COLOR_ARM : LED_COLOR_OFF);
 						LaunchControl_XLSetLedColor(LED_ARM, color);
 						if(m_track_control_state == stateidx) {
-							LaunchControl_XLSetTrackControlStripColor(LED_TRACK_CONTROL_ARM_ON);
+							LaunchControl_XLSetTrackControlStripColor(m_track_armed, LED_TRACK_CONTROL_ARM_ON, LED_TRACK_CONTROL_ARM_OFF);
 						}
 						break;
 				}
