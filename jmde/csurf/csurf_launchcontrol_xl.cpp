@@ -357,7 +357,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 #endif
 
     typedef bool (CSurf_LaunchControl_XL::*MidiHandlerFunc)(MIDI_event_t*);
-    
+#if 0    
     bool OnLaunchControl_XLReset(MIDI_event_t *evt) {
       unsigned char onResetMsg[]={0xf0,0x00,0x00,0x66,0x14,0x01,0x58,0x59,0x5a,};
       onResetMsg[4]=0x14; 
@@ -365,6 +365,20 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
       {
         // on reset
 		ShowConsoleMsgF("OnLaunchControl_XLReset executing\n");
+        LaunchControl_XLReset();
+        TrackList_UpdateAllExternalSurfaces();
+        return true;
+      }
+      return false;
+    }
+#endif
+    
+    bool OnLaunchControl_XLTemplateChange(MIDI_event_t *evt) {
+      const unsigned char onResetMsg[]={0xf0,0x00,0x20,0x29,0x02,0x11,0x77};
+      if (evt->midi_message[7] != 0x08 && evt->midi_message[8]==0xf7 && evt->size == sizeof(onResetMsg)+2 && !memcmp(evt->midi_message,onResetMsg,sizeof(onResetMsg)))
+      {
+        // on reset
+		ShowConsoleMsgF("OnLaunchControl_XLTemplateChange executing - template change from Factory Template 1 not allowed!\n");
         LaunchControl_XLReset();
         TrackList_UpdateAllExternalSurfaces();
         return true;
@@ -1044,7 +1058,10 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
         static const int nHandlers = 5;
         static const MidiHandlerFunc handlers[nHandlers] = {
+            &CSurf_LaunchControl_XL::OnLaunchControl_XLTemplateChange,
+#if 0
             &CSurf_LaunchControl_XL::OnLaunchControl_XLReset,
+#endif
             &CSurf_LaunchControl_XL::OnFaderMove,
             &CSurf_LaunchControl_XL::OnRotaryEncoder,
             &CSurf_LaunchControl_XL::OnJogWheel,
