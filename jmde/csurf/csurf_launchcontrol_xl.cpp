@@ -1795,6 +1795,9 @@ public:
       {
 	    ShowConsoleMsgF("SetSurfaceMute id=%d mute=%s\n", id,
 			(mute ? "MUTE" : "unmute"));
+		if(mute)
+			LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_MUTE);
+
 	    if (id<8) {
           m_midiout->Send(0x90, 0x08+(id&7),mute?0x7f:0,-1); // MF8 differs from MCU documentation
 		  return;
@@ -1882,6 +1885,9 @@ public:
         ShowConsoleMsgF("SetSurfaceSolo id=%d solo=%s\n",
 			id,
 			(solo ? "SOLO" : "unsolo"));
+		if(solo)
+			LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_SOLO);
+
         if (id < 8)
           //m_midiout->Send(0x90, 0x08+(id&7),solo?1:0,-1); //blink (doesn't work on MF8), also MF8 SOLO differs from MCU documentation
           m_midiout->Send(0x90, 0x10+(id&7),solo?0x7f:0,-1);
@@ -1905,6 +1911,8 @@ public:
         ShowConsoleMsgF("SetSurfaceArm id=%d arm=%s\n",
 			id,
 			(recarm ? "ARM" : "unarm"));
+		if(recarm)
+			LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_ARM);
         if (id < 8)
         {
           m_midiout->Send(0x90, 0x0+(id&7),recarm?0x7f:0,-1);
