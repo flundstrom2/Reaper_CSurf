@@ -15,8 +15,8 @@
 #ifdef _DEBUG
 #define _FLU_DEBUG
 #endif
-#define _FLU_DEBUG_ONMIDIEVENT
-//#define _FLU_DEBUG_ONFADERMOVE
+#define _FLU_DEBUG_ONMIDIEVENT 0
+#define _FLU_DEBUG_ONFADERMOVE
 
 #ifdef _FLU_DEBUG
 static void ShowConsoleMsgF(const char *fmt, ...)
@@ -196,6 +196,106 @@ typedef enum {
 
 	LED_LAST
 } led_e;
+
+
+typedef enum {
+	BUTTON_EVENT_NOTE_PRESSED	= 1 << 0,
+	BUTTON_EVENT_NOTE_RELEASED	= 1 << 1,
+	BUTTON_EVENT_CC_PRESSED		= 1 << 2,
+	BUTTON_EVENT_CC_RELEASED	= 1 << 3,
+
+	BUTTON_EVENT_INVALID		= 0x80
+} button_event_e;
+
+const char *getButtonEvent(button_event_e buttonevent) {
+	switch (buttonevent) {
+		case BUTTON_EVENT_NOTE_PRESSED:		return "NOTE_PRESSED";
+		case BUTTON_EVENT_NOTE_RELEASED:	return "NOTE_RELEASED";
+		case BUTTON_EVENT_CC_PRESSED:		return "CC_PRESSED";
+		case BUTTON_EVENT_CC_RELEASED:		return "CC_RELEASED";
+		default:
+			return "BITMAP";
+	}
+}
+
+typedef enum {
+	// Note codes
+	BUTTON_TRACK_FOCUS_1 = 0x29,
+	BUTTON_TRACK_FOCUS_2 = 0x2A,
+	BUTTON_TRACK_FOCUS_3 = 0x2B,
+	BUTTON_TRACK_FOCUS_4 = 0x2C,
+	BUTTON_TRACK_FOCUS_5 = 0x39,
+	BUTTON_TRACK_FOCUS_6 = 0x3A,
+	BUTTON_TRACK_FOCUS_7 = 0x3B,
+	BUTTON_TRACK_FOCUS_8 = 0x3C,
+
+	BUTTON_TRACK_CONTROL_1 = 0x49,
+	BUTTON_TRACK_CONTROL_2 = 0x4A,
+	BUTTON_TRACK_CONTROL_3 = 0x4B,
+	BUTTON_TRACK_CONTROL_4 = 0x4C,
+	BUTTON_TRACK_CONTROL_5 = 0x59,
+	BUTTON_TRACK_CONTROL_6 = 0x5A,
+	BUTTON_TRACK_CONTROL_7 = 0x5B,
+	BUTTON_TRACK_CONTROL_8 = 0x5C,
+
+	BUTTON_DEVICE = 0x69,
+	BUTTON_MUTE = 0x6A,
+	BUTTON_SOLO = 0x6B,
+	BUTTON_ARM = 0x6C,
+} button_note_e;
+
+typedef enum {
+	// CC code Bt bb vv, vv=7F for button down, vv=00 for button up
+	BUTTON_SEND_SELECT_UP = 0x68,
+	BUTTON_SEND_SELECT_DOWN = 0x69,
+
+	BUTTON_TRACK_SELECT_LEFT = 0x6A,
+	BUTTON_TRACK_SELECT_RIGHT = 0x6B,
+} button_cc_e;
+
+const char *getButtonName(button_event_e buttonevent, char bb)
+{
+	switch(buttonevent) {
+		case BUTTON_EVENT_NOTE_PRESSED:
+		case BUTTON_EVENT_NOTE_RELEASED:
+			switch (bb) {
+				case BUTTON_TRACK_FOCUS_1:		return "TRACK_FOCUS_1";
+				case BUTTON_TRACK_FOCUS_2:		return "TRACK_FOCUS_2";
+				case BUTTON_TRACK_FOCUS_3:		return "TRACK_FOCUS_3";
+				case BUTTON_TRACK_FOCUS_4:		return "TRACK_FOCUS_4";
+				case BUTTON_TRACK_FOCUS_5:		return "TRACK_FOCUS_5";
+				case BUTTON_TRACK_FOCUS_6:		return "TRACK_FOCUS_6";
+				case BUTTON_TRACK_FOCUS_7:		return "TRACK_FOCUS_7";
+				case BUTTON_TRACK_FOCUS_8:		return "TRACK_FOCUS_8";
+
+				case BUTTON_TRACK_CONTROL_1:	return "TRACK_CONTROL_1";
+				case BUTTON_TRACK_CONTROL_2:	return "TRACK_CONTROL_2";
+				case BUTTON_TRACK_CONTROL_3:	return "TRACK_CONTROL_3";
+				case BUTTON_TRACK_CONTROL_4:	return "TRACK_CONTROL_4";
+				case BUTTON_TRACK_CONTROL_5:	return "TRACK_CONTROL_5";
+				case BUTTON_TRACK_CONTROL_6:	return "TRACK_CONTROL_6";
+				case BUTTON_TRACK_CONTROL_7:	return "TRACK_CONTROL_7";
+				case BUTTON_TRACK_CONTROL_8:	return "TRACK_CONTROL_8";
+
+				case BUTTON_DEVICE:				return "DEVICE";
+				case BUTTON_MUTE:				return "MUTE";
+				case BUTTON_SOLO:				return "SOLO";
+				case BUTTON_ARM:				return "ARM";
+			}
+			break;
+		case BUTTON_EVENT_CC_PRESSED:
+		case BUTTON_EVENT_CC_RELEASED:
+			switch (bb) {
+				case BUTTON_SEND_SELECT_UP:				return "SEND_SELECT_UP";
+				case BUTTON_SEND_SELECT_DOWN:			return "SEND_SELECT_DOWN";
+				case BUTTON_TRACK_SELECT_LEFT:			return "TRACK_SELECT_LEFT";
+				case BUTTON_TRACK_SELECT_RIGHT:			return "TRACK_SELECT_RIGHT";
+			}
+			break;
+	}
+	return "INVALID";
+}
+
 
 
 
@@ -639,6 +739,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 #endif
 
     typedef bool (CSurf_LaunchControl_XL::*MidiHandlerFunc)(MIDI_event_t*);
+    typedef bool (CSurf_LaunchControl_XL::*ButtonHandlerFunc)(button_event_e, char, MIDI_event_t*);
 #if 0    
     bool OnLaunchControl_XLReset(MIDI_event_t *evt) {
       unsigned char onResetMsg[]={0xf0,0x00,0x00,0x66,0x14,0x01,0x58,0x59,0x5a,};
@@ -753,6 +854,8 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 #endif
 		return true; // Simply ignore so far...
 	  }
+	  ShowConsoleMsgF("OnFaderMove ignored\n"); 
+
       return false;
     }
 
@@ -834,29 +937,31 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		}
 	    return true;
 	  }
+	  ShowConsoleMsgF("OnRotaryEncoder ignored\n"); 
+
 	  return false;
 	}
 	
 	bool OnJogWheel( MIDI_event_t *evt ) {
-  	ShowConsoleMsgF("OnJogWheel invoked\n");
-    if ( (evt->midi_message[0]&0xf0) == 0xb0 &&
-         evt->midi_message[1] == 0x3c ) // jog wheel
-     {
-	   bool rev = false;
-	   bool fwd = false;
-	   if (evt->midi_message[2] == 0x41) {
-         CSurf_OnRew(m_mackie_arrow_states&128);
-		 rev = true;
-	   } else  if (evt->midi_message[2] == 0x01)  {
-         CSurf_OnFwd(m_mackie_arrow_states&128);
-		 fwd = true;
-	   }
-	   ShowConsoleMsgF("OnJogWheel executed %s %s\n", 
-			rev ? "REV" : "",
-			fwd ? "FWD" : "");
-       return true;
-     }
-    return false;
+  		ShowConsoleMsgF("OnJogWheel invoked\n");
+		if ( (evt->midi_message[0]&0xf0) == 0xb0 &&
+			 evt->midi_message[1] == 0x3c ) // jog wheel
+		 {
+		   bool rev = false;
+		   bool fwd = false;
+		   if (evt->midi_message[2] == 0x41) {
+			 CSurf_OnRew(m_mackie_arrow_states&128);
+			 rev = true;
+		   } else  if (evt->midi_message[2] == 0x01)  {
+			 CSurf_OnFwd(m_mackie_arrow_states&128);
+			 fwd = true;
+		   }
+		   ShowConsoleMsgF("OnJogWheel executed %s %s\n", 
+				rev ? "REV" : "",
+				fwd ? "FWD" : "");
+		   return true;
+		 }
+		return false;
 	}
 	
 	bool OnAutoMode( MIDI_event_t *evt ) {
@@ -878,7 +983,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  return true;
 	}
 	
-	bool OnBankChannel( MIDI_event_t *evt ) {
+	bool OnBankChannel(button_event_e buttonevent, char bb, MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnBankChannel\n");
 	  int maxfaderpos=0;
 	  int movesize=8;
@@ -893,11 +998,12 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	    }
 	  }
 
-	  if (evt->midi_message[1]>=0x30) movesize=1;
-	  else  movesize=8; // maxfaderpos?
+//	  if (evt->midi_message[1]>=0x30) movesize=1;
+//	  else  movesize=8; // maxfaderpos?
+	  movesize=8;
 
 
-	  if (evt->midi_message[1] & 1) // increase by X
+	  if (bb & 1) // increase by movesize
 	  {
 	    int msize=CSurf_NumTracks(g_csurf_mcpmode);
 	    if (movesize>1)
@@ -1019,12 +1125,12 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  return true;
 	}
 	
-	bool OnChannelSelect( MIDI_event_t *evt ) {
+	bool OnChannelSelect(button_event_e buttonevent, char bb, MIDI_event_t *evt ) {
 		if(g_ignore_channelselect) {
 		  ShowConsoleMsgF("OnChannelSelect: Ignoring...\n");
 		  return false;
 		}
-
+// TODO FIX!
 	  int tid=evt->midi_message[1]-0x18;
 	  int tidc = tid & 7;
 	  tidc+=1+m_alllaunchcontrol_xls_bank_offset+m_offset;
@@ -1042,7 +1148,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  return true;
 	}
 	
-	bool OnChannelSelectDC( MIDI_event_t *evt ) {
+	bool OnChannelSelectDC(button_event_e buttonevent, char bb, MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnChannelSelectDC\n");
 	  int tid=evt->midi_message[1]-0x18;
 	  tid&=7;
@@ -1067,30 +1173,30 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	}
 
 	bool OnTransport( MIDI_event_t *evt ) {
-	ShowConsoleMsgF("OnTransport\n");
-    switch(evt->midi_message[1]) {
-    case 0x5f:
-       CSurf_OnRecord();
-       break;
-    case 0x5e:
-      CSurf_OnPlay();
-      break;
-    case 0x5d:
-      CSurf_OnStop();
-      break;
-    case 0x5b:
-      SendMessage(g_hwnd,WM_COMMAND,ID_MARKER_PREV,0);
-      break;
-    case 0x5c:
-      SendMessage(g_hwnd,WM_COMMAND,ID_MARKER_NEXT,0);
-    }
-    return true;
+		ShowConsoleMsgF("OnTransport\n");
+		switch(evt->midi_message[1]) {
+		case 0x5f:
+		   CSurf_OnRecord();
+		   break;
+		case 0x5e:
+		  CSurf_OnPlay();
+		  break;
+		case 0x5d:
+		  CSurf_OnStop();
+		  break;
+		case 0x5b:
+		  SendMessage(g_hwnd,WM_COMMAND,ID_MARKER_PREV,0);
+		  break;
+		case 0x5c:
+		  SendMessage(g_hwnd,WM_COMMAND,ID_MARKER_NEXT,0);
+		}
+		return true;
 	}
 	
 	bool OnMarker( MIDI_event_t *evt ) {
-	ShowConsoleMsgF("OnMarker\n");
-    SendMessage(g_hwnd,WM_COMMAND,IsKeyDown(VK_SHIFT)?ID_INSERT_MARKERRGN:ID_INSERT_MARKER,0);
-    return true;
+	  ShowConsoleMsgF("OnMarker\n");
+      SendMessage(g_hwnd,WM_COMMAND,IsKeyDown(VK_SHIFT)?ID_INSERT_MARKERRGN:ID_INSERT_MARKER,0);
+      return true;
 	}
 	
 	bool OnCycle( MIDI_event_t *evt ) {
@@ -1119,10 +1225,10 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		return true;
 	}
 	
-  void ClearUndoLed() {
-    if (m_midiout) 
-      m_midiout->Send(0x90,0x51,0,-1);    
-  }
+	void ClearUndoLed() {
+		if (m_midiout) 
+		m_midiout->Send(0x90,0x51,0,-1);    
+	}
   
 	bool OnUndo( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnUndo\n");
@@ -1211,64 +1317,96 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  return true;
 	}
 	
+	bool OnMuteSoloArmButton(button_event_e buttonevent, char bb, MIDI_event_t *evt ) {
+		ShowConsoleMsgF("OnMuteSoloArmButton button=0x%02X (%s)\n", bb, getButtonName(buttonevent, bb));
+	  switch (bb) {
+		  case BUTTON_MUTE:
+			  LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_MUTE);
+			  break;
+		  case BUTTON_SOLO:
+			  LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_SOLO);
+			  break;
+		  case BUTTON_ARM:
+			  LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_ARM);
+			  break;
+		  default:
+			  return false;
+	  }
+	  return true;
+	}
+	
 	struct ButtonHandler {
+	  button_event_e eventmask;
 	  unsigned int evt_min;
 	  unsigned int evt_max; // inclusive
-	  MidiHandlerFunc func;
-	  MidiHandlerFunc func_dc;
+	  ButtonHandlerFunc func;
+	  ButtonHandlerFunc func_dc;
 	};
 
 	bool OnButtonPress( MIDI_event_t *evt ) {
+		button_event_e button_event = BUTTON_EVENT_INVALID;
+		if ((evt->midi_message[0] & 0xF0) == 0x80) {
+			button_event = BUTTON_EVENT_NOTE_RELEASED;
+		} else if ((evt->midi_message[0] & 0xF0) == 0x90) {
+			button_event = BUTTON_EVENT_NOTE_PRESSED;
+		} else if ((evt->midi_message[0] & 0xF0) == 0xB0 && evt->midi_message[2] == 0x7F) {
+			button_event = BUTTON_EVENT_CC_PRESSED;
+		} else if ((evt->midi_message[0] & 0xF0) == 0xB0 && evt->midi_message[2] == 0x00) {
+			button_event = BUTTON_EVENT_CC_PRESSED;
+		} else {
+			button_event = BUTTON_EVENT_INVALID;
+		}
 
-	  ShowConsoleMsgF("OnButtonPress invoked\n");
-	  if ( (evt->midi_message[0]&0xf0) != 0x90 )  
-	    return false;
+		ShowConsoleMsgF("OnButtonPress invoked button_event=0x%02X (%s) button=0x%02X (%s) velocity=%d\n",
+			button_event,
+			getButtonEvent(button_event),
+			evt->midi_message[1],
+			getButtonName(button_event, evt->midi_message[1]),
+			evt->midi_message[2]);
 
-	  static const int nHandlers = 23;
-	  static const int nPressOnlyHandlers = 20;
-	  static const ButtonHandler handlers[nHandlers] = {
-//          MF8:    MCU:
-// ARM      00 xx   00 xx
-// MUTE     08 xx   10 xx
-// SOLO     10 xx   08 xx
-// SELECTED         18 00
+	    if (button_event == BUTTON_EVENT_INVALID)  
+	      return false;
 
-	      // Press down only events
-	      { 0x4a, 0x4e, &CSurf_LaunchControl_XL::OnAutoMode,           NULL },
-	      { 0x2e, 0x31, &CSurf_LaunchControl_XL::OnBankChannel,        NULL },
-	      { 0x35, 0x35, &CSurf_LaunchControl_XL::OnSMPTEBeats,         NULL },
-	      { 0x20, 0x27, &CSurf_LaunchControl_XL::OnRotaryEncoderPush,  NULL },
-	      { 0x00, 0x07, &CSurf_LaunchControl_XL::OnRecArm,             NULL },
-//	      { 0x08, 0x0f, NULL,                             &CSurf_LaunchControl_XL::OnSoloDC },
-	      { 0x08, 0x17, &CSurf_LaunchControl_XL::OnMuteSolo,           NULL },
-	      { 0x18, 0x1f, &CSurf_LaunchControl_XL::OnChannelSelect,      &CSurf_LaunchControl_XL::OnChannelSelectDC },
-	      { 0x5b, 0x5f, &CSurf_LaunchControl_XL::OnTransport,          NULL },
-	      { 0x54, 0x54, &CSurf_LaunchControl_XL::OnMarker,             NULL },
-	      { 0x56, 0x56, &CSurf_LaunchControl_XL::OnCycle,              NULL },
-	      { 0x59, 0x59, &CSurf_LaunchControl_XL::OnClick,              NULL },
-	      { 0x50, 0x50, &CSurf_LaunchControl_XL::OnSave,               NULL },
-	      { 0x51, 0x51, &CSurf_LaunchControl_XL::OnUndo,               NULL },
-	      { 0x64, 0x64, &CSurf_LaunchControl_XL::OnZoom,               NULL },
-	      { 0x65, 0x65, &CSurf_LaunchControl_XL::OnScrub,              NULL },
-	      { 0x32, 0x32, &CSurf_LaunchControl_XL::OnFlip,               NULL },
-	      { 0x33, 0x33, &CSurf_LaunchControl_XL::OnGlobal,             NULL },
-	      { 0x36, 0x3d, &CSurf_LaunchControl_XL::OnFunctionKey,        NULL },
-	      { 0x5a, 0x5a, &CSurf_LaunchControl_XL::OnSoloButton,         NULL },
+#define ELEMENTSOF(v) (sizeof(v) / sizeof(v[0]))
+	    static const ButtonHandler handlers[] = {
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x4a, 0x4e, &CSurf_LaunchControl_XL::OnAutoMode,           NULL },
+	      { BUTTON_EVENT_CC_PRESSED,   0x6A, 0x6B, &CSurf_LaunchControl_XL::OnBankChannel,        NULL },
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x35, 0x35, &CSurf_LaunchControl_XL::OnSMPTEBeats,         NULL },
+//        { BUTTON_EVENT_NOTE_PRESSED, 0x20, 0x27, &CSurf_LaunchControl_XL::OnRotaryEncoderPush,  NULL },
+//        { BUTTON_EVENT_NOTE_PRESSED, 0x00, 0x07, &CSurf_LaunchControl_XL::OnRecArm,             NULL },
+//        { BUTTON_EVENT_NOTE_PRESSED, 0x08, 0x0f, NULL,                                          &CSurf_LaunchControl_XL::OnSoloDC },
+//        { BUTTON_EVENT_NOTE_PRESSED, 0x08, 0x17, &CSurf_LaunchControl_XL::OnMuteSolo,           NULL },
+          { BUTTON_EVENT_NOTE_PRESSED, 0x29, 0x2C, &CSurf_LaunchControl_XL::OnChannelSelect,      &CSurf_LaunchControl_XL::OnChannelSelectDC },
+          { BUTTON_EVENT_NOTE_PRESSED, 0x39, 0x3C, &CSurf_LaunchControl_XL::OnChannelSelect,      &CSurf_LaunchControl_XL::OnChannelSelectDC },
+//        { BUTTON_EVENT_NOTE_PRESSED, 0x5b, 0x5f, &CSurf_LaunchControl_XL::OnTransport,          NULL },
+//        { BUTTON_EVENT_NOTE_PRESSED, 0x54, 0x54, &CSurf_LaunchControl_XL::OnMarker,             NULL },
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x56, 0x56, &CSurf_LaunchControl_XL::OnCycle,              NULL },
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x59, 0x59, &CSurf_LaunchControl_XL::OnClick,              NULL },
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x50, 0x50, &CSurf_LaunchControl_XL::OnSave,               NULL },
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x51, 0x51, &CSurf_LaunchControl_XL::OnUndo,               NULL },
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x64, 0x64, &CSurf_LaunchControl_XL::OnZoom,               NULL },
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x65, 0x65, &CSurf_LaunchControl_XL::OnScrub,              NULL },
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x32, 0x32, &CSurf_LaunchControl_XL::OnFlip,               NULL },
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x33, 0x33, &CSurf_LaunchControl_XL::OnGlobal,             NULL },
+//	      { BUTTON_EVENT_NOTE_PRESSED, 0x36, 0x3d, &CSurf_LaunchControl_XL::OnFunctionKey,        NULL },
+	      { BUTTON_EVENT_NOTE_PRESSED, 0x6A, 0x6C, &CSurf_LaunchControl_XL::OnMuteSoloArmButton,NULL },
 	      
 	      // Press and release events
-	      { 0x46, 0x49, &CSurf_LaunchControl_XL::OnKeyModifier },
-	      { 0x60, 0x63, &CSurf_LaunchControl_XL::OnScroll },
-	      { 0x68, 0x70, &CSurf_LaunchControl_XL::OnTouch },
+//	      { BUTTON_EVENT_NOTE_PRESSED | BUTTON_EVENT_NOTE_RELEASED, 0x46, 0x49, &CSurf_LaunchControl_XL::OnKeyModifier },
+//	      { BUTTON_EVENT_NOTE_PRESSED | BUTTON_EVENT_NOTE_RELEASED, 0x60, 0x63, &CSurf_LaunchControl_XL::OnScroll },
+//	      { BUTTON_EVENT_NOTE_PRESSED | BUTTON_EVENT_NOTE_RELEASED, 0x68, 0x70, &CSurf_LaunchControl_XL::OnTouch },
 	  };
 
 	  unsigned int evt_code = evt->midi_message[1];  //get_midi_evt_code( evt );
 	  
 	  // For these events we only want to track button press
+#if 0
 	  if ( evt->midi_message[2] >= 0x40 ) {
 		ShowConsoleMsgF("OnButtonPress track button press 0x%02X 0x%02X\n",
 			evt->midi_message[1],
 			evt->midi_message[2]
 			);
+#endif
 		
 	    // Check for double click
 	    DWORD now = timeGetTime();
@@ -1277,25 +1415,30 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	    m_button_last = evt_code;
 	    m_button_last_time = now;
 
+		static const int nHandlers = ELEMENTSOF(handlers);
+
 	    // Find event handler
-	    for ( int i = 0; i < nPressOnlyHandlers; i++ ) { 
+	    for ( int i = 0; i < nHandlers; i++ ) { 
 	      ButtonHandler bh = handlers[i];
-	      if ( bh.evt_min <= evt_code && evt_code <= bh.evt_max ) {
+	      if ( (bh.eventmask & button_event) && bh.evt_min <= evt_code && evt_code <= bh.evt_max ) {
+#if 0
 	        // Try double click first
 			  if ( double_click && bh.func_dc != NULL ) {
-				if ( (this->*bh.func_dc)(evt) ) {
+				if ( (this->*bh.func_dc)(button_event, evt->midi_message[1], evt) ) {
 					ShowConsoleMsgF("OnButtonPress double click function returned TRUE\n");
-					return true; }
+					return true;
+				}
 			  }
+#endif
 
 	        // Single click (and unhandled double clicks)
 	        if ( bh.func != NULL )
-	          if ( (this->*bh.func)(evt) ) 
+	          if ( (this->*bh.func)(button_event, evt->midi_message[1], evt) ) 
 				ShowConsoleMsgF("OnButtonPress single click (and unhandled double click) function returned TRUE\n");
 	            return true;
 	      }
 	    }
-	  }
+#if 0
 	  
 	  // For these events we want press and release
 	  for ( int i = nPressOnlyHandlers; i < nHandlers; i++ )
@@ -1306,22 +1449,24 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 			  return true;
 		  }
 	  }
+#endif
 
-
+#if 0
 	  // Pass thru if not otherwise handled
-	  if ( evt->midi_message[2]>=0x40 ) {
+	   if ( evt->midi_message[2]>=0x40 ) {
 		ShowConsoleMsgF("OnButtonPress passing through event to kbd_OnMidiEvent\n");
 	    int a=evt->midi_message[1];
 	    MIDI_event_t evt={0,3,{0xbf-(m_mackie_modifiers&15),a,0}};
 	    kbd_OnMidiEvent(&evt,-1);
 	  }
+#endif
 	  
 	  return true;
 	}
 
     void OnMIDIEvent(MIDI_event_t *evt)
     {
-        #ifdef _FLU_DEBUG_ONMIDIEVENT
+        #if _FLU_DEBUG_ONMIDIEVENT >= 1
 		// logs a lot ... , hence disabled
 		char therest[256];
 		therest[0] = '\0';
@@ -1338,19 +1483,28 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 			(evt->size < 3 ? "INVALID size!" : ""));
         #endif
 
-        static const int nHandlers = 5;
-        static const MidiHandlerFunc handlers[nHandlers] = {
+        static const MidiHandlerFunc handlers[] = {
             &CSurf_LaunchControl_XL::OnLaunchControl_XLTemplateChange,
 #if 0
             &CSurf_LaunchControl_XL::OnLaunchControl_XLReset,
 #endif
+            &CSurf_LaunchControl_XL::OnButtonPress,
             &CSurf_LaunchControl_XL::OnFaderMove,
             &CSurf_LaunchControl_XL::OnRotaryEncoder,
             &CSurf_LaunchControl_XL::OnJogWheel,
-            &CSurf_LaunchControl_XL::OnButtonPress,
         };
-        for ( int i = 0; i < nHandlers; i++ )
-          if ( (this->*handlers[i])(evt) ) return;
+        static const int nHandlers = ELEMENTSOF(handlers);
+		for ( int i = 0; i < nHandlers; i++ ) {
+#if _FLU_DEBUG_ONMIDIEVENT >= 2
+			ShowConsoleMsgF("Testing handler %d/%d...\n", i, nHandlers);
+#endif
+			if ( (this->*handlers[i])(evt) ) {
+#if _FLU_DEBUG_ONMIDIEVENT >= 2
+				ShowConsoleMsgF("Handler %d returned true, aborting\n", i);
+#endif
+				return;
+			}
+		}
     }
 
 public:
