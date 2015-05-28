@@ -33,6 +33,168 @@ static void ShowConsoleMsgF(const char *fmt, ...)
 #endif
 
 
+// Mute buttons			amber+green when muted, amber when not muted
+// Solo buttons			Green
+// Record ARM buttons	Red
+
+typedef enum {
+	TRACKCONTROLSTATE_MUTE,
+	TRACKCONTROLSTATE_SOLO,
+	TRACKCONTROLSTATE_ARM,
+
+	TRACKCONTROLSTATE_LAST // Last in list
+} TrackControlState_e;
+
+const char *g_track_control_state_s[TRACKCONTROLSTATE_LAST] = {
+	"MUTE",
+	"SOLO",
+	"ARM"
+};
+
+typedef enum {
+	LED_COLOR_OFF = 0x0C,
+	LED_COLOR_RED_LOW = 0x0D,
+	LED_COLOR_RED_FULL = 0x0F,
+	LED_COLOR_RED_FULL_FLASH = ((LED_COLOR_RED_FULL & ~0x0C) | 0x08),
+	LED_COLOR_AMBER_LOW = 0x1D,
+	LED_COLOR_AMBER_FULL = 0x3F,
+	LED_COLOR_AMBER_FULL_FLASH = ((LED_COLOR_AMBER_FULL & ~0x0C) | 0x08),
+	LED_COLOR_YELLOW_FULL = 0x3E,
+	LED_COLOR_YELLOW_FULL_FLASH = ((LED_COLOR_YELLOW_FULL & ~0x0C) | 0x08),
+	LED_COLOR_GREEN_LOW = 0x1C,
+	LED_COLOR_GREEN_FULL = 0x3C,
+	LED_COLOR_GREEN_FULL_FLASH = ((LED_COLOR_GREEN_FULL & ~0x0C) | 0x08)
+} led_color_e;
+
+// The following LEDs only implements yellow color
+#define LED_COLOR_MUTE   LED_COLOR_YELLOW_FULL
+#define LED_COLOR_SOLO   LED_COLOR_YELLOW_FULL
+#define LED_COLOR_ARM    LED_COLOR_YELLOW_FULL
+
+// RED doesn't work
+// AMBER, YELLOW, GREEN works, but no visible difference from AMBER
+#define LED_COLOR_DEVICE LED_COLOR_GREEN_FULL
+
+const char *g_led_names[] = {
+	"SEND_A_1",
+	"SEND_A_2",
+	"SEND_A_3",
+	"SEND_A_4",
+	"SEND_A_5",
+	"SEND_A_6",
+	"SEND_A_7",
+	"SEND_A_8",
+
+	"SEND_B_1",
+	"SEND_B_2",
+	"SEND_B_3",
+	"SEND_B_4",
+	"SEND_B_5",
+	"SEND_B_6",
+	"SEND_B_7",
+	"SEND_B_8",
+
+	"PAN_1",
+	"PAN_2",
+	"PAN_3",
+	"PAN_4",
+	"PAN_5",
+	"PAN_6",
+	"PAN_7",
+	"PAN_8",
+
+	"TRACK_FOCUS_1",
+	"TRACK_FOCUS_2",
+	"TRACK_FOCUS_3",
+	"TRACK_FOCUS_4",
+	"TRACK_FOCUS_5",
+	"TRACK_FOCUS_6",
+	"TRACK_FOCUS_7",
+	"TRACK_FOCUS_8",
+
+	"TRACK_CONTROL_1",
+	"TRACK_CONTROL_2",
+	"TRACK_CONTROL_3",
+	"TRACK_CONTROL_4",
+	"TRACK_CONTROL_5",
+	"TRACK_CONTROL_6",
+	"TRACK_CONTROL_7",
+	"TRACK_CONTROL_8",
+
+	"DEVICE",
+	"MUTE",
+	"SOLO",
+	"ARM",
+
+	"SEND_SELECT_UP",
+	"SEND_SELECT_DOWN",
+
+	"TRACK_SELECT_LEFT",
+	"TRACK_SELECT_RIGHT"
+};
+
+typedef enum {
+	LED_SEND_A_1,
+	LED_SEND_A_2,
+	LED_SEND_A_3,
+	LED_SEND_A_4,
+	LED_SEND_A_5,
+	LED_SEND_A_6,
+	LED_SEND_A_7,
+	LED_SEND_A_8,
+
+	LED_SEND_B_1,
+	LED_SEND_B_2,
+	LED_SEND_B_3,
+	LED_SEND_B_4,
+	LED_SEND_B_5,
+	LED_SEND_B_6,
+	LED_SEND_B_7,
+	LED_SEND_B_8,
+
+	LED_PAN_1,
+	LED_PAN_2,
+	LED_PAN_3,
+	LED_PAN_4,
+	LED_PAN_5,
+	LED_PAN_6,
+	LED_PAN_7,
+	LED_PAN_8,
+
+	LED_TRACK_FOCUS_1,
+	LED_TRACK_FOCUS_2,
+	LED_TRACK_FOCUS_3,
+	LED_TRACK_FOCUS_4,
+	LED_TRACK_FOCUS_5,
+	LED_TRACK_FOCUS_6,
+	LED_TRACK_FOCUS_7,
+	LED_TRACK_FOCUS_8,
+
+	LED_TRACK_CONTROL_1,
+	LED_TRACK_CONTROL_2,
+	LED_TRACK_CONTROL_3,
+	LED_TRACK_CONTROL_4,
+	LED_TRACK_CONTROL_5,
+	LED_TRACK_CONTROL_6,
+	LED_TRACK_CONTROL_7,
+	LED_TRACK_CONTROL_8,
+
+	LED_DEVICE,
+	LED_MUTE,
+	LED_SOLO,
+	LED_ARM,
+
+	LED_SEND_SELECT_UP,
+	LED_SEND_SELECT_DOWN,
+
+	LED_TRACK_SELECT_LEFT,
+	LED_TRACK_SELECT_RIGHT,
+
+	LED_LAST
+} led_e;
+
+
+
 #define SPLASH_MESSAGE "REAPER! Initializing... Please wait..."
 
 static double charToVol(unsigned char val)
@@ -172,6 +334,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
     midi_Output *m_midiout;
     midi_Input *m_midiin;
 
+	TrackControlState_e m_track_control_state;
+	bool m_device_mode;
+
 	double m_pan_lastchanges[256];
     int m_vol_lastpos[256];
     int m_pan_lastpos[256];
@@ -221,6 +386,79 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
         curr->next = action;
       }
     }
+
+
+const char *LaunchControl_XLGetLedName(led_e led) 
+{
+	return (led < LED_LAST ? g_led_names[led] : "INVALID LED #");
+}
+
+void LaunchControl_XLSetLedColor(led_e led, char color)
+{
+	ShowConsoleMsgF("LauncControl_XLSetLedColor led=0x%2X (%s) color=0x%02X\n",
+		led,
+		LaunchControl_XLGetLedName(led),
+		color);
+
+	// Set LED color
+	struct
+	{
+	  MIDI_event_t evt;
+	  char data[11];
+	}
+	poo;
+	poo.evt.frame_offset=0;
+	poo.evt.size=11;
+	poo.evt.midi_message[0]=0xF0;
+	poo.evt.midi_message[1]=0x00;
+	poo.evt.midi_message[2]=0x20;
+	poo.evt.midi_message[3]=0x29;
+	poo.evt.midi_message[4]=0x02;
+	poo.evt.midi_message[5]=0x11;
+	poo.evt.midi_message[6]=0x78;
+	poo.evt.midi_message[7]=0x08;
+	poo.evt.midi_message[8]=led;
+	poo.evt.midi_message[9]=color;
+	poo.evt.midi_message[10]=0xF7;
+	Sleep(5);
+	m_midiout->SendMsg(&poo.evt,-1);
+}
+
+	void LaunchControl_XLSetTrackControlState(TrackControlState_e track_control_state)
+	{
+		ShowConsoleMsgF("LauncControl_XLSetTrackControlState: track_control_state=%d (%s) m_device_mode=%s\n",
+			track_control_state,
+			g_track_control_state_s[track_control_state],
+			m_device_mode ? "DEVICE" : "OFF"
+			);
+		m_track_control_state = track_control_state;
+
+		if (m_midiout)
+		{
+			LaunchControl_XLSetLedColor(LED_DEVICE, m_device_mode ? LED_COLOR_DEVICE : LED_COLOR_OFF);
+#if 1
+			// Set MUTE/SOLO/ARM function led
+			for(int stateidx = 0; stateidx < TRACKCONTROLSTATE_LAST; stateidx++) {
+				char color = 0x00;
+				switch(stateidx) {
+					case (TRACKCONTROLSTATE_MUTE):
+						color = (m_track_control_state == stateidx ? LED_COLOR_MUTE : LED_COLOR_OFF);
+						LaunchControl_XLSetLedColor(LED_MUTE, color);
+						break;
+					case (TRACKCONTROLSTATE_SOLO):
+						color = (m_track_control_state == stateidx ? LED_COLOR_SOLO : LED_COLOR_OFF);
+						LaunchControl_XLSetLedColor(LED_SOLO, color);
+						break;
+					case (TRACKCONTROLSTATE_ARM):
+						color = (m_track_control_state == stateidx ? LED_COLOR_ARM : LED_COLOR_OFF);
+						LaunchControl_XLSetLedColor(LED_ARM, color);
+						break;
+				}
+			}
+#endif
+		}
+	}
+
     
     void LaunchControl_XLReset()
     {
@@ -237,6 +475,8 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
       memset(m_vol_lastpos,0xff,sizeof(m_vol_lastpos));
       memset(m_pan_lastpos,0xff,sizeof(m_pan_lastpos));
 
+	  m_device_mode = false;
+	  m_track_control_state = TRACKCONTROLSTATE_MUTE;
 
       if (m_midiout)
       {
@@ -265,6 +505,8 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		poo.evt.midi_message[8]=0xF7;
 		Sleep(5);
 		m_midiout->SendMsg(&poo.evt,-1);
+
+		LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_ARM);
 #if 0
 
 		m_midiout->Send(0x90, 0x32,m_flipmode?1:0,-1); // flip button
@@ -1579,6 +1821,7 @@ public:
     
     void selectTrack( MediaTrack *trackid ) {
       const GUID *guid = GetTrackGUID(trackid);
+	  ShowConsoleMsgF("selectTrack\n");
 
       // Empty list, start new list
       if ( m_selected_tracks == NULL ) {
@@ -1604,6 +1847,7 @@ public:
     
     void deselectTrack( MediaTrack *trackid ) {
       const GUID *guid = GetTrackGUID(trackid);
+	  ShowConsoleMsgF("deselectTrack\n");
       
       // Empty list?
       if ( m_selected_tracks ) {
@@ -1658,6 +1902,9 @@ public:
       FIXID(id)
       if (m_midiout && id>=0 && id < 256 && id < m_size)
       {
+        ShowConsoleMsgF("SetSurfaceArm id=%d arm=%s\n",
+			id,
+			(recarm ? "ARM" : "unarm"));
         if (id < 8)
         {
           m_midiout->Send(0x90, 0x0+(id&7),recarm?0x7f:0,-1);
@@ -1668,6 +1915,11 @@ public:
     { 
       if (m_midiout)
       {
+        ShowConsoleMsgF("SetPlayState play=%s pause=%s rec=%s\n",
+			(play ? "PLAY" : "false"),
+			(pause ? "PAUSE" : "false"),
+			(rec ? "REC" : "false")
+			);
         m_midiout->Send(0x90, 0x5f,rec?0x7f:0,-1);
         m_midiout->Send(0x90, 0x5e,play||pause?0x7f:0,-1);
         m_midiout->Send(0x90, 0x5d,!play?0x7f:0,-1); 
@@ -1677,6 +1929,8 @@ public:
     {
       if (m_midiout)
       {
+        ShowConsoleMsgF("SetRepeatState rep=%s\n",
+			(rep ? "REPEAT" : "false"));
         m_midiout->Send(0x90, 0x56,rep?0x7f:0,-1);
       }
       
