@@ -868,7 +868,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		  pan = true;
 	  }
 	  else {
-		ShowConsoleMsgF("OnRotaryEncoder invoked\n");
+		ShowConsoleMsgF("OnRotaryEncoder non-pan invoked\n");
 	  }
 	  if (pan) {
 	    int tid=evt->midi_message[1]-0x10;
@@ -941,7 +941,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
 	  return false;
 	}
-	
+#if 0	
 	bool OnJogWheel( MIDI_event_t *evt ) {
   		ShowConsoleMsgF("OnJogWheel invoked\n");
 		if ( (evt->midi_message[0]&0xf0) == 0xb0 &&
@@ -963,7 +963,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		 }
 		return false;
 	}
+#endif
 	
+#if 0
 	bool OnAutoMode( MIDI_event_t *evt ) {
     #if 0
 	  UpdateMackieDisplay( 0, "ok", 2 );
@@ -982,7 +984,8 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
 	  return true;
 	}
-	
+#endif
+
 	bool OnBankChannel(button_event_e buttonevent, char bb, MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnBankChannel\n");
 	  int maxfaderpos=0;
@@ -1035,6 +1038,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  return true;
 	}
 	
+#if 0
 	bool OnSMPTEBeats( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnSMPTEBeats\n");
     int *tmodeptr = (int*)projectconfig_var_addr(NULL,__g_projectconfig_timemode2);
@@ -1061,6 +1065,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  return true;
 	}
 	
+#endif
+
+#if 0
 	bool OnRotaryEncoderPush( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnRotaryEncoderPush\n");
 	  int trackid=evt->midi_message[1]-0x20;
@@ -1083,17 +1090,39 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  }
 	  return true;
 	}
-	
+#endif
+
 	bool OnRecArm( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnRecArm\n");
 	  int tid=evt->midi_message[1];
 	  tid+=1+m_alllaunchcontrol_xls_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
 	  if (tr)
-	    CSurf_OnRecArmChange(tr,-1);
+	    CSurf_SetSurfaceRecArm(tr, CSurf_OnRecArmChange(tr,-1), NULL);
 	  return true;
 	}
 	
+	bool OnMute( MIDI_event_t *evt ) {
+		ShowConsoleMsgF("OnMute\n");
+	  int tid=evt->midi_message[1];
+	  tid+=1+m_alllaunchcontrol_xls_bank_offset+m_offset;
+	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
+	  if (tr)
+	    CSurf_SetSurfaceMute(tr,CSurf_OnMuteChange(tr,-1),NULL);
+	  return true;
+	}
+	
+	bool OnSolo( MIDI_event_t *evt ) {
+		ShowConsoleMsgF("OnSolo\n");
+	  int tid=evt->midi_message[1];
+	  tid+=1+m_alllaunchcontrol_xls_bank_offset+m_offset;
+	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
+	  if (tr)
+	    CSurf_SetSurfaceSolo(tr,CSurf_OnSoloChange(tr,-1),NULL);
+	  return true;
+	}
+
+#if 0	
 	bool OnMuteSolo( MIDI_event_t *evt ) {
 	  int tid=evt->midi_message[1]-0x08;
 	  int ismute=(tid&8);
@@ -1114,7 +1143,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  }
 	  return true;
 	}
-	
+#endif
+
+#if 0
 	bool OnSoloDC( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnSoloDC\n");
 	  int tid=evt->midi_message[1]-0x08;
@@ -1124,7 +1155,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  CSurf_SetSurfaceSolo(tr,CSurf_OnSoloChange(tr,1),NULL);
 	  return true;
 	}
-	
+#endif
 	bool OnChannelSelect(button_event_e buttonevent, char bb, MIDI_event_t *evt ) {
 		if(g_ignore_channelselect) {
 		  ShowConsoleMsgF("OnChannelSelect: Ignoring...\n");
@@ -1148,6 +1179,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  return true;
 	}
 	
+#if 0
 	bool OnChannelSelectDC(button_event_e buttonevent, char bb, MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnChannelSelectDC\n");
 	  int tid=evt->midi_message[1]-0x18;
@@ -1172,6 +1204,10 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  return true;
 	}
 
+#endif
+
+#if 0
+
 	bool OnTransport( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnTransport\n");
 		switch(evt->midi_message[1]) {
@@ -1193,29 +1229,43 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		return true;
 	}
 	
+#endif
+
+#if 0
 	bool OnMarker( MIDI_event_t *evt ) {
 	  ShowConsoleMsgF("OnMarker\n");
       SendMessage(g_hwnd,WM_COMMAND,IsKeyDown(VK_SHIFT)?ID_INSERT_MARKERRGN:ID_INSERT_MARKER,0);
       return true;
 	}
-	
+
+#endif
+
+
+#if 0
 	bool OnCycle( MIDI_event_t *evt ) {
 	  ShowConsoleMsgF("OnCycle\n");
       SendMessage(g_hwnd,WM_COMMAND,IDC_REPEAT,0);
       return true;
 	}
-	
+#endif
+
+#if 0
 	bool OnClick( MIDI_event_t *evt ) {
   	  ShowConsoleMsgF("OnClick\n");
 	  SendMessage(g_hwnd,WM_COMMAND,ID_METRONOME,0);
 	  return true;
 	}
+#endif
 	
+#if 0
 	void ClearSaveLed() {
       if (m_midiout) 
         m_midiout->Send(0x90,0x50,0,-1);	  
 	}
 	
+#endif
+
+#if 0
 	bool OnSave( MIDI_event_t *evt ) {
 	 	ShowConsoleMsgF("OnSave\n");
 		if (m_midiout) 
@@ -1224,12 +1274,17 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		ScheduleAction( timeGetTime() + 1000, &CSurf_LaunchControl_XL::ClearSaveLed );
 		return true;
 	}
-	
+
+#endif
+
+#if 0
 	void ClearUndoLed() {
 		if (m_midiout) 
 		m_midiout->Send(0x90,0x51,0,-1);    
 	}
+#endif
   
+#if 0
 	bool OnUndo( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnUndo\n");
 		if (m_midiout) 
@@ -1238,6 +1293,10 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		ScheduleAction( timeGetTime() + 150, &CSurf_LaunchControl_XL::ClearUndoLed );
 		return true;
 	}
+
+#endif
+
+#if 0
 	
 	bool OnZoom( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnZoom\n");
@@ -1246,7 +1305,10 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		  m_midiout->Send(0x90, 0x64,(m_mackie_arrow_states&64)?0x7f:0,-1);
 		return true;
 	}
-	
+
+#endif
+
+#if 0	
 	bool OnScrub( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnScrub\n");
 		m_mackie_arrow_states^=128;
@@ -1254,7 +1316,10 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		  m_midiout->Send(0x90, 0x65,(m_mackie_arrow_states&128)?0x7f:0,-1);
 		return true;
 	}
-	
+
+#endif
+
+#if 0	
 	bool OnFlip( MIDI_event_t *evt ) {
 	  ShowConsoleMsgF("OnFlip\n");
 	  m_flipmode=!m_flipmode;
@@ -1264,7 +1329,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  TrackList_UpdateAllExternalSurfaces();
 	  return true;
 	}
+#endif
 
+#if 0
 	bool OnGlobal( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnGlobal\n");
 		g_csurf_mcpmode=!g_csurf_mcpmode;
@@ -1273,7 +1340,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		TrackList_UpdateAllExternalSurfaces();
 		return true;
 	}
+#endif
 	
+#if 0
 	bool OnKeyModifier( MIDI_event_t *evt ) {
 	  ShowConsoleMsgF("OnKeyModifier\n");
 	  int mask=(1<<(evt->midi_message[1]-0x46));
@@ -1283,7 +1352,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	    m_mackie_modifiers&=~mask;
 	  return true;
 	}
-	
+#endif
+
+#if 0
 	bool OnScroll( MIDI_event_t *evt ) {
 	  ShowConsoleMsgF("OnScroll\n");
 	  if (evt->midi_message[2]>0x40)
@@ -1293,6 +1364,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  return true;
 	}
 	
+#endif
+
+#if 0
 	bool OnTouch( MIDI_event_t *evt ) {
 	  ShowConsoleMsgF("OnTouch\n");
 	  int fader = evt->midi_message[1]-0x68;
@@ -1300,7 +1374,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
       m_fader_lasttouch[fader]=0xFFFFFFFF; // never use this again!
       return true;
 	}
-	
+#endif
+
+#if 0
 	bool OnFunctionKey( MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnFunctionKey\n");
 		if (!(m_cfg_flags&CONFIG_FLAG_MAPF1F8TOMARKERS)) return false;
@@ -1310,13 +1386,16 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		SendMessage(g_hwnd,WM_COMMAND, command, 0);
 		return true;
 	}
+#endif
 
+#if 0
 	bool OnSoloButton( MIDI_event_t *evt ) {
 	  ShowConsoleMsgF("OnSoloButton\n");
 	  SoloAllTracks(0);
 	  return true;
 	}
-	
+#endif
+
 	bool OnMuteSoloArmButton(button_event_e buttonevent, char bb, MIDI_event_t *evt ) {
 		ShowConsoleMsgF("OnMuteSoloArmButton button=0x%02X (%s)\n", bb, getButtonName(buttonevent, bb));
 	  switch (bb) {
@@ -1334,7 +1413,61 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  }
 	  return true;
 	}
-	
+
+	int buttonToTrackId(char bb)
+	{
+		switch(bb) {
+			case BUTTON_TRACK_FOCUS_1:
+			case BUTTON_TRACK_CONTROL_1:	return 0;
+
+			case BUTTON_TRACK_FOCUS_2:
+			case BUTTON_TRACK_CONTROL_2:	return 1;
+
+			case BUTTON_TRACK_FOCUS_3:
+			case BUTTON_TRACK_CONTROL_3:	return 2;
+
+			case BUTTON_TRACK_FOCUS_4:
+			case BUTTON_TRACK_CONTROL_4:	return 3;
+
+			case BUTTON_TRACK_FOCUS_5:
+			case BUTTON_TRACK_CONTROL_5:	return 4;
+
+			case BUTTON_TRACK_FOCUS_6:
+			case BUTTON_TRACK_CONTROL_6:	return 5;
+
+			case BUTTON_TRACK_FOCUS_7:
+			case BUTTON_TRACK_CONTROL_7:	return 6;
+
+			default:
+				return -1;
+		}
+	}
+	bool OnTrackControlButton(button_event_e buttonevent, char bb, MIDI_event_t *evt )
+	{
+		ShowConsoleMsgF("OnTrackControlButton button=0x%02X (%s)\n", bb, getButtonName(buttonevent, bb));
+
+		int tid = buttonToTrackId(bb);
+		if(tid == -1) {
+			ShowConsoleMsgF("OnTrackControlButton non-track button\n", bb, getButtonName(buttonevent, bb));
+			return false;
+		}
+		evt->midi_message[1] = tid;
+
+		switch (m_track_control_state) {
+			case TRACKCONTROLSTATE_MUTE:
+				return OnMute(evt);
+			case TRACKCONTROLSTATE_SOLO:
+				return OnSolo(evt);
+			case TRACKCONTROLSTATE_ARM:
+				return OnRecArm(evt);
+				break;
+			default:
+				ShowConsoleMsgF("OnTrackControlButton INVALID m_track_control_state\n");
+		}
+		return false;
+	}
+
+
 	struct ButtonHandler {
 	  button_event_e eventmask;
 	  unsigned int evt_min;
@@ -1376,8 +1509,8 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 //        { BUTTON_EVENT_NOTE_PRESSED, 0x00, 0x07, &CSurf_LaunchControl_XL::OnRecArm,             NULL },
 //        { BUTTON_EVENT_NOTE_PRESSED, 0x08, 0x0f, NULL,                                          &CSurf_LaunchControl_XL::OnSoloDC },
 //        { BUTTON_EVENT_NOTE_PRESSED, 0x08, 0x17, &CSurf_LaunchControl_XL::OnMuteSolo,           NULL },
-          { BUTTON_EVENT_NOTE_PRESSED, 0x29, 0x2C, &CSurf_LaunchControl_XL::OnChannelSelect,      &CSurf_LaunchControl_XL::OnChannelSelectDC },
-          { BUTTON_EVENT_NOTE_PRESSED, 0x39, 0x3C, &CSurf_LaunchControl_XL::OnChannelSelect,      &CSurf_LaunchControl_XL::OnChannelSelectDC },
+		  { BUTTON_EVENT_NOTE_PRESSED, 0x29, 0x2C, &CSurf_LaunchControl_XL::OnChannelSelect,      NULL }, // &CSurf_LaunchControl_XL::OnChannelSelectDC },
+          { BUTTON_EVENT_NOTE_PRESSED, 0x39, 0x3C, &CSurf_LaunchControl_XL::OnChannelSelect,      NULL }, // &CSurf_LaunchControl_XL::OnChannelSelectDC },
 //        { BUTTON_EVENT_NOTE_PRESSED, 0x5b, 0x5f, &CSurf_LaunchControl_XL::OnTransport,          NULL },
 //        { BUTTON_EVENT_NOTE_PRESSED, 0x54, 0x54, &CSurf_LaunchControl_XL::OnMarker,             NULL },
 //	      { BUTTON_EVENT_NOTE_PRESSED, 0x56, 0x56, &CSurf_LaunchControl_XL::OnCycle,              NULL },
@@ -1390,6 +1523,8 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 //	      { BUTTON_EVENT_NOTE_PRESSED, 0x33, 0x33, &CSurf_LaunchControl_XL::OnGlobal,             NULL },
 //	      { BUTTON_EVENT_NOTE_PRESSED, 0x36, 0x3d, &CSurf_LaunchControl_XL::OnFunctionKey,        NULL },
 	      { BUTTON_EVENT_NOTE_PRESSED, 0x6A, 0x6C, &CSurf_LaunchControl_XL::OnMuteSoloArmButton,NULL },
+	      { BUTTON_EVENT_NOTE_PRESSED, 0x49, 0x4C, &CSurf_LaunchControl_XL::OnTrackControlButton,NULL },
+	      { BUTTON_EVENT_NOTE_PRESSED, 0x59, 0x5C, &CSurf_LaunchControl_XL::OnTrackControlButton,NULL },
 	      
 	      // Press and release events
 //	      { BUTTON_EVENT_NOTE_PRESSED | BUTTON_EVENT_NOTE_RELEASED, 0x46, 0x49, &CSurf_LaunchControl_XL::OnKeyModifier },
@@ -1491,8 +1626,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
             &CSurf_LaunchControl_XL::OnButtonPress,
             &CSurf_LaunchControl_XL::OnFaderMove,
             &CSurf_LaunchControl_XL::OnRotaryEncoder,
-            &CSurf_LaunchControl_XL::OnJogWheel,
+            //&CSurf_LaunchControl_XL::OnJogWheel,
         };
+
         static const int nHandlers = ELEMENTSOF(handlers);
 		for ( int i = 0; i < nHandlers; i++ ) {
 #if _FLU_DEBUG_ONMIDIEVENT >= 2
@@ -1532,6 +1668,11 @@ public:
       memset(m_fader_touchstate,0,sizeof(m_fader_touchstate));
       memset(m_fader_lasttouch,0,sizeof(m_fader_lasttouch));
       memset(m_pan_lasttouch,0,sizeof(m_pan_lasttouch));
+
+  	memset(m_track_armed, 0x00,sizeof(m_track_armed));
+	memset(m_track_soloed, 0x00,sizeof(m_track_soloed));
+	memset(m_track_muted, 0x00,sizeof(m_track_muted));
+
 
 
       //create midi hardware access
@@ -1875,6 +2016,7 @@ public:
 
     void SetTrackListChange() 
     { 
+      ShowConsoleMsgF("SetTrackListChange\n");
       if (m_midiout)
       {
         int x;
@@ -1929,8 +2071,9 @@ public:
       }
     }
 #define FIXID(id) int id=CSurf_TrackToID(trackid,g_csurf_mcpmode); int oid=id; \
-  if (id>0) { id -= m_offset+m_alllaunchcontrol_xls_bank_offset+1; if (id==8) id=-1; } else if (id==0) id=8; 
+	if (id>0) { id -= m_offset+m_alllaunchcontrol_xls_bank_offset+1; if (id==8) id=-1; } else if (id==0) id=8; 
 
+#if 0
     void SetSurfaceVolume(MediaTrack *trackid, double volume) 
     { 
       FIXID(id)
@@ -1954,7 +2097,9 @@ public:
         }
       }
     }
+#endif
 
+#if 0
     void SetSurfacePan(MediaTrack *trackid, double pan) 
     { 
       FIXID(id)
@@ -1982,6 +2127,8 @@ public:
         }
       }
     }
+#endif
+
     void SetSurfaceMute(MediaTrack *trackid, bool mute) 
     {
       FIXID(id)
@@ -2004,6 +2151,7 @@ public:
       ShowConsoleMsgF("SetSurfaceMute ignored\n");
     }
 
+#if 0
     void SetSurfaceSelected(MediaTrack *trackid, bool selected) 
     { 
       if ( selected ) 
@@ -2019,6 +2167,7 @@ public:
       }
       UpdateAutoModes();
     }
+#endif
     
     void selectTrack( MediaTrack *trackid ) {
       const GUID *guid = GetTrackGUID(trackid);
@@ -2111,23 +2260,28 @@ public:
     void SetSurfaceRecArm(MediaTrack *trackid, bool recarm) 
     { 
       FIXID(id)
+	  ShowConsoleMsgF("SetSurfaceRecArm id=%d arm=%s, m_size=%d\n",
+		id,
+		(recarm ? "ARM" : "unarm"),
+		m_size);
       if (m_midiout && id>=0 && id < 256 && id < m_size)
       {
-        ShowConsoleMsgF("SetSurfaceArm id=%d arm=%s\n",
-			id,
-			(recarm ? "ARM" : "unarm"));
 		if(m_track_armed[id] != recarm) {
 			m_track_armed[id] = recarm;
 			LaunchControl_XLSetTrackControlState(TRACKCONTROLSTATE_ARM);
 		}
+
 #if 0
         if (id < 8)
         {
           m_midiout->Send(0x90, 0x0+(id&7),recarm?0x7f:0,-1);
         }
+
 #endif
       }
     }
+
+#if 0
     void SetPlayState(bool play, bool pause, bool rec) 
     { 
       if (m_midiout)
@@ -2142,6 +2296,9 @@ public:
         m_midiout->Send(0x90, 0x5d,!play?0x7f:0,-1); 
       }
     }
+#endif
+
+#if 0
     void SetRepeatState(bool rep) 
     {
       if (m_midiout)
@@ -2152,6 +2309,7 @@ public:
       }
       
     }
+#endif
 
 #if 0
     void SetTrackTitle(MediaTrack *trackid, const char *title) 
@@ -2173,6 +2331,7 @@ public:
       }
     }
 #endif
+
     bool GetTouchState(MediaTrack *trackid, int isPan=0)
     {
       FIXID(id)
@@ -2203,11 +2362,14 @@ public:
       return false; 
     }
 
+#if 0
     void SetAutoMode(int mode) 
     { 
       UpdateAutoModes();
     }
+#endif
 
+#if 0
     void UpdateAutoModes() {
       if ( m_midiout) {
         int modes[5] = { 0, 0, 0, 0, 0 };
@@ -2226,6 +2388,7 @@ public:
         m_midiout->Send(0x90, 0x4E, modes[AUTO_MODE_LATCH] ? ( multi ? 1:0x7f ) : 0, -1 );
       }
     }
+#endif
 
     void ResetCachedVolPanStates() 
     { 
@@ -2273,6 +2436,7 @@ public:
       }
     }
     
+#if 0
     bool IsKeyDown(int key) 
     { 
       if (m_midiin)
@@ -2284,6 +2448,7 @@ public:
 
       return false; 
     }
+#endif
 };
 
 static void parseParms(const char *str, int parms[5])
