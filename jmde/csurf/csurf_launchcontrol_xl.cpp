@@ -1886,6 +1886,16 @@ public:
           delete action;
         }
         
+
+		static int prevNumTracks = 0;
+		int numTracks = GetNumTracks();
+		if(numTracks != prevNumTracks) {
+			prevNumTracks = numTracks;
+			setTrackControlState(m_track_control_state); // Force refresh
+			TrackList_UpdateAllExternalSurfaces();
+		}
+
+
         if (m_midiout)
         {
             double pp=(GetPlayState()&1) ? GetPlayPosition() : GetCursorPosition();
