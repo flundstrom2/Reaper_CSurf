@@ -1,6 +1,8 @@
 #ifndef _CSURF_H_
 #define _CSURF_H_
 
+typedef void (*screensetNewCallbackFunc)(void);
+#include "../reaper_plugin_functions.h"
 #include "../reaper_plugin.h"
 #include "../../WDL/db2val.h"
 #include "../../WDL/wdlstring.h"
@@ -14,6 +16,7 @@ extern HWND g_hwnd;
 /* 
 ** Calls back to REAPER (all validated on load)
 */
+#if 0
 extern double (*DB2SLIDER)(double x);
 extern double (*SLIDER2DB)(double y);
 extern int (*GetNumMIDIInputs)(); 
@@ -111,6 +114,8 @@ extern bool (*TrackFX_GetParamName)(MediaTrack *tr, int fx, int param, char *buf
 extern bool (*TrackFX_FormatParamValue)(MediaTrack *tr, int fx, int param, double val, char *buf, int buflen);
 extern bool (*TrackFX_GetFXName)(MediaTrack *tr, int fx, char *buf, int buflen);
 extern GUID *(*GetTrackGUID)(MediaTrack *tr);
+
+#endif
 
 extern int *g_config_csurf_rate,*g_config_zoommode;
 

@@ -310,6 +310,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\reaper_plugin_functions.h"
+				>
+			</File>
+			<File
 				RelativePath="resource.h"
 				>
 			</File>
