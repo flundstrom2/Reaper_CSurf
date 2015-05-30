@@ -558,6 +558,21 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		m_midiout->SendMsg(&poo.evt,-1);
 	}
 
+	bool isTrackVisible(int id)
+	{
+		bool b_show = false;
+		if(GetMediaTrackInfo_Value != NULL) {
+			MediaTrack *tr = GetTrack(NULL, id);
+			if(tr) {
+				bool b_showintcp = (GetMediaTrackInfo_Value(tr, "B_SHOWINTCP") != 0.0 ? true : false);
+				bool b_showmixer = (GetMediaTrackInfo_Value(tr, "B_SHOWINMIXER") != 0.0 ? true : false);
+				if(b_showintcp || b_showmixer) {
+					b_show = true;
+				}
+			 }
+		}
+		return b_show;
+	}
 
 	// C: double GetMediaTrackInfo_Value(MediaTrack* tr, const char* parmname)
 	// bool * B_SHOWINTCP : show track panel in tcp -- do not use on master
@@ -584,20 +599,8 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 						  led,
 						  g_led_names[led],
 						  (states[id] ? "ON" : "off"));
-			  bool b_show = true;
 			  int numTracks = GetNumTracks();
-			  if(GetMediaTrackInfo_Value != NULL) {
-				  MediaTrack *tr = GetTrack(NULL, id);
-				  if(tr) {
-					  bool b_showintcp = (GetMediaTrackInfo_Value(tr, "B_SHOWINTCP") != 0.0 ? true : false);
-					  bool b_showmixer = (GetMediaTrackInfo_Value(tr, "B_SHOWINMIXER") != 0.0 ? true : false);
-					  if(b_showintcp || b_showmixer) {						  
-					  } else {
-						  b_show = false;
-					  }
-					  
-				  }
-			  }
+			  bool b_show = isTrackVisible(id);
 			  if(id >= numTracks) {
 				  b_show = false;
 			  }
@@ -1185,7 +1188,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  int tid=evt->midi_message[1];
 	  tid+=1+m_alllaunchcontrol_xls_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
-	  if (tr)
+	  if (tr && isTrackVisible(tid))
 	    CSurf_SetSurfaceRecArm(tr, CSurf_OnRecArmChange(tr,-1), NULL);
 	  return true;
 	}
@@ -1195,7 +1198,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  int tid=evt->midi_message[1];
 	  tid+=1+m_alllaunchcontrol_xls_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
-	  if (tr)
+	  if (tr && isTrackVisible(tid))
 	    CSurf_SetSurfaceMute(tr,CSurf_OnMuteChange(tr,-1),NULL);
 	  return true;
 	}
@@ -1205,7 +1208,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  int tid=evt->midi_message[1];
 	  tid+=1+m_alllaunchcontrol_xls_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
-	  if (tr)
+	  if (tr && isTrackVisible(tid))
 	    CSurf_SetSurfaceSolo(tr,CSurf_OnSoloChange(tr,-1),NULL);
 	  return true;
 	}

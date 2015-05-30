@@ -45,7 +45,7 @@ goto retry
 :cont
 echo Copying...
 xcopy ..\Debug\Plugins\reaper_csurf_mf8_debug.dll "C:\Program Files (x86)\REAPER\Plugins" /Y
-xcopy ..\Release\Plugins\reaper_csurf_mf8.dll "C:\Program Files (x86)\REAPER\Plugins" /Y
+rem xcopy ..\Release\Plugins\reaper_csurf_mf8.dll "C:\Program Files (x86)\REAPER\Plugins" /Y
 rem Must be compiled in x64 mode to be detected by REAPER (x64)!
 rem xcopy ..\Debug\Plugins\reaper_csurf_mf8.dll "C:\Program Files\REAPER (x64)\Plugins" /Y
 echo Starting REAPER...
