@@ -558,6 +558,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		m_midiout->SendMsg(&poo.evt,-1);
 	}
 
+
+	// C: double GetMediaTrackInfo_Value(MediaTrack* tr, const char* parmname)
+	// bool * : show track panel in tcp -- do not use on master
 	void setTrackControlStripColor(const bool states[256], char oncolor, char offcolor)
 	{
 		int min =  m_offset+m_alllaunchcontrol_xls_bank_offset;
@@ -1501,6 +1504,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
 			case BUTTON_TRACK_FOCUS_7:
 			case BUTTON_TRACK_CONTROL_7:	return 6;
+
+			case BUTTON_TRACK_FOCUS_8:
+			case BUTTON_TRACK_CONTROL_8:	return 7;
 
 			default:
 				return -1;
