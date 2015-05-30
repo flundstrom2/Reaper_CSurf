@@ -560,7 +560,8 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
 
 	// C: double GetMediaTrackInfo_Value(MediaTrack* tr, const char* parmname)
-	// bool * : show track panel in tcp -- do not use on master
+	// bool * B_SHOWINTCP : show track panel in tcp -- do not use on master
+	//MediaTrack* GetTrack(ReaProject* proj, int trackidx)
 	void setTrackControlStripColor(const bool states[256], char oncolor, char offcolor)
 	{
 		int min =  m_offset+m_alllaunchcontrol_xls_bank_offset;
@@ -583,10 +584,32 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 						  led,
 						  g_led_names[led],
 						  (states[id] ? "ON" : "off"));
-			  if (states[id]) {
-				LCXLSendSetLedColor(led, oncolor);
+			  bool b_show = true;
+			  int numTracks = GetNumTracks();
+			  if(GetMediaTrackInfo_Value != NULL) {
+				  MediaTrack *tr = GetTrack(NULL, id);
+				  if(tr) {
+					  bool b_showintcp = (GetMediaTrackInfo_Value(tr, "B_SHOWINTCP") != 0.0 ? true : false);
+					  bool b_showmixer = (GetMediaTrackInfo_Value(tr, "B_SHOWINMIXER") != 0.0 ? true : false);
+					  if(b_showintcp || b_showmixer) {						  
+					  } else {
+						  b_show = false;
+					  }
+					  
+				  }
+			  }
+			  if(id >= numTracks) {
+				  b_show = false;
+			  }
+			  if (b_show) {
+				  if (states[id]) {
+					LCXLSendSetLedColor(led, oncolor);
+				  } else {
+					LCXLSendSetLedColor(led, offcolor);
+				  }
 			  } else {
-				LCXLSendSetLedColor(led, offcolor);
+				  ShowConsoleMsgF("setTrackControlStripColor: Track id=%d not shown - HIDING\n", id);
+				  LCXLSendSetLedColor(led, LED_COLOR_OFF);
 			  }
 		  }
 		}
