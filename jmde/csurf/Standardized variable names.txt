@@ -1,0 +1,12 @@
+Standardized variable names
+
+m_offset							tidc for fader 1
+m_alllaunchcontrol_xls_bank_offset	Set in OnTrackSelection() to (newpos - (newpos % movesize)) where
+									newpos is tid.
+									In OnBankChannel() to +-8
+
+tr      MediaTrack *
+id      Track id in DLL (0..max-1)
+tid		Track ID of fader (0..7)
+tidc 	Track ID in REAPER (1..max)
+
