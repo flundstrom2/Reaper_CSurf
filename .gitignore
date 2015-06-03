@@ -6,3 +6,4 @@ Plugins
 Release
 /jmde/csurf/UpgradeLog.XML
 _UpgradeReport_Files
+/jmde/csurf/*.opensdf
