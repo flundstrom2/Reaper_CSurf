@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual C++ Express 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reaper_csurf", "reaper_csurf.vcproj", "{8FFD4B21-BD75-4A62-BD45-068FD44145E1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reaper_csurf_mf8", "reaper_csurf_mf8.vcproj", "{8FFD4B21-BD75-4A62-BD45-068FD44145E1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
