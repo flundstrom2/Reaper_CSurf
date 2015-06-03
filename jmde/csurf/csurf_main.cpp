@@ -5,18 +5,17 @@
 */
 
 
+#define REAPERAPI_IMPLEMENT
+
 #include "csurf.h"
 
-/*
-extern reaper_csurf_reg_t csurf_bcf_reg,csurf_faderport_reg,csurf_hui_reg,
-     csurf_mcu_reg,csurf_mcuex_reg,csurf_tranzport_reg,csurf_alphatrack_reg,csurf_01X_reg;
-*/
 extern reaper_csurf_reg_t csurf_mf8_reg;
+extern reaper_csurf_reg_t csurf_launchcontrol_xl_reg;
 
 REAPER_PLUGIN_HINSTANCE g_hInst; // used for dialogs, if any
 HWND g_hwnd;
 
-
+# if 0
 double (*DB2SLIDER)(double x);
 double (*SLIDER2DB)(double y);
 int (*GetNumMIDIInputs)(); 
@@ -84,6 +83,7 @@ int (*GetPlayState)();
 double (*GetPlayPosition)();
 double (*GetCursorPosition)();
 int (*GetSetRepeat)(int val);
+MediaTrack *(*GetTrack)(ReaProject* proj, int trackidx);
 
 void (*format_timestr_pos)(double tpos, char *buf, int buflen, int modeoverride); // modeoverride=-1 for proj
 void (*SetAutomationMode)(int mode, bool onlySel); // sets all or selected tracks
@@ -113,6 +113,7 @@ bool (*TrackFX_GetParamName)(MediaTrack *tr, int fx, int param, char *buf, int b
 bool (*TrackFX_FormatParamValue)(MediaTrack *tr, int fx, int param, double val, char *buf, int buflen);
 GUID *(*GetTrackGUID)(MediaTrack *tr);
 
+#endif
 
 int *g_config_csurf_rate,*g_config_zoommode;
 
@@ -132,88 +133,99 @@ REAPER_PLUGIN_DLL_EXPORT int REAPER_PLUGIN_ENTRYPOINT(REAPER_PLUGIN_HINSTANCE hI
 
   g_hwnd = rec->hwnd_main;
   int errcnt=0;
-#define IMPAPI(x) if (!((*((void **)&(x)) = (void *)rec->GetFunc(#x)))) errcnt++;
+#define IMPAPI(x) \
+	do { \
+		if (!((*((void **)&(x)) = (void *)rec->GetFunc(#x)))) { \
+		  errcnt++; \
+		} \
+	} while (0)
 
-  IMPAPI(DB2SLIDER)
-  IMPAPI(SLIDER2DB)
-  IMPAPI(GetNumMIDIInputs)
-  IMPAPI(GetNumMIDIOutputs)
-  IMPAPI(CreateMIDIInput)
-  IMPAPI(CreateMIDIOutput)
-  IMPAPI(GetMIDIOutputName)
-  IMPAPI(GetMIDIInputName)
-  IMPAPI(CSurf_TrackToID)
-  IMPAPI(CSurf_TrackFromID)
-  IMPAPI(CSurf_NumTracks)
-  IMPAPI(CSurf_SetTrackListChange)
-  IMPAPI(CSurf_SetSurfaceVolume)
-  IMPAPI(CSurf_SetSurfacePan)
-  IMPAPI(CSurf_SetSurfaceMute)
-  IMPAPI(CSurf_SetSurfaceSelected)
-  IMPAPI(CSurf_SetSurfaceSolo)
-  IMPAPI(CSurf_SetSurfaceRecArm)
-  IMPAPI(CSurf_GetTouchState)
-  IMPAPI(CSurf_SetAutoMode)
-  IMPAPI(CSurf_SetPlayState)
-  IMPAPI(CSurf_SetRepeatState)
-  IMPAPI(CSurf_OnVolumeChange)
-  IMPAPI(CSurf_OnPanChange)
-  IMPAPI(CSurf_OnMuteChange)
-  IMPAPI(CSurf_OnSelectedChange)
-  IMPAPI(CSurf_OnSoloChange)
-  IMPAPI(CSurf_OnFXChange)
-  IMPAPI(CSurf_OnRecArmChange)
-  IMPAPI(CSurf_OnPlay)
-  IMPAPI(CSurf_OnStop)
-  IMPAPI(CSurf_OnFwd)
-  IMPAPI(CSurf_OnRew)
-  IMPAPI(CSurf_OnRecord)
-  IMPAPI(CSurf_GoStart)
-  IMPAPI(CSurf_GoEnd)
-  IMPAPI(CSurf_OnArrow)
-  IMPAPI(CSurf_OnTrackSelection)
-  IMPAPI(CSurf_ResetAllCachedVolPanStates)
-  IMPAPI(CSurf_ScrubAmt)
-  IMPAPI(TrackList_UpdateAllExternalSurfaces)
-  IMPAPI(kbd_OnMidiEvent)
-  IMPAPI(GetMasterMuteSoloFlags)
-  IMPAPI(ClearAllRecArmed)
-  IMPAPI(SetTrackAutomationMode)
-  IMPAPI(GetTrackAutomationMode)
-  IMPAPI(SoloAllTracks)
-  IMPAPI(MuteAllTracks)
-  IMPAPI(BypassFxAllTracks)
-  IMPAPI(GetTrackInfo)
-  IMPAPI(SetTrackSelected)
-  IMPAPI(SetAutomationMode)
-  IMPAPI(UpdateTimeline)
-  IMPAPI(Main_UpdateLoopInfo)
-  IMPAPI(GetPlayState)
-  IMPAPI(GetPlayPosition)
-  IMPAPI(GetCursorPosition)
-  IMPAPI(format_timestr_pos)
-  IMPAPI(TimeMap2_timeToBeats)
-  IMPAPI(Track_GetPeakInfo)
-  IMPAPI(GetTrackUIVolPan)
-  IMPAPI(GetSetRepeat)
-  IMPAPI(mkvolpanstr)
-  IMPAPI(mkvolstr)
-  IMPAPI(mkpanstr)
-  IMPAPI(MoveEditCursor)
-  IMPAPI(adjustZoom)
-  IMPAPI(GetHZoomLevel)
 
-  IMPAPI(TrackFX_GetCount)
-  IMPAPI(TrackFX_GetNumParams)
-  IMPAPI(TrackFX_GetParam)
-  IMPAPI(TrackFX_SetParam)
-  IMPAPI(TrackFX_GetParamName)
-  IMPAPI(TrackFX_FormatParamValue)
-  IMPAPI(TrackFX_GetFXName)
+  IMPAPI(ShowConsoleMsg);
+  IMPAPI(GetMediaTrackInfo_Value);
+  IMPAPI(GetNumTracks);
+
+  IMPAPI(DB2SLIDER);
+  IMPAPI(SLIDER2DB);
+  IMPAPI(GetNumMIDIInputs);
+  IMPAPI(GetNumMIDIOutputs);
+  IMPAPI(CreateMIDIInput);
+  IMPAPI(CreateMIDIOutput);
+  IMPAPI(GetMIDIOutputName);
+  IMPAPI(GetMIDIInputName);
+  IMPAPI(CSurf_TrackToID);
+  IMPAPI(CSurf_TrackFromID);
+  IMPAPI(CSurf_NumTracks);
+  IMPAPI(CSurf_SetTrackListChange);
+  IMPAPI(CSurf_SetSurfaceVolume);
+  IMPAPI(CSurf_SetSurfacePan);
+  IMPAPI(CSurf_SetSurfaceMute);
+  IMPAPI(CSurf_SetSurfaceSelected);
+  IMPAPI(CSurf_SetSurfaceSolo);
+  IMPAPI(CSurf_SetSurfaceRecArm);
+  IMPAPI(CSurf_GetTouchState);
+  IMPAPI(CSurf_SetAutoMode);
+  IMPAPI(CSurf_SetPlayState);
+  IMPAPI(CSurf_SetRepeatState);
+  IMPAPI(CSurf_OnVolumeChange);
+  IMPAPI(CSurf_OnPanChange);
+  IMPAPI(CSurf_OnMuteChange);
+  IMPAPI(CSurf_OnSelectedChange);
+  IMPAPI(CSurf_OnSoloChange);
+  IMPAPI(CSurf_OnFXChange);
+  IMPAPI(CSurf_OnRecArmChange);
+  IMPAPI(CSurf_OnPlay);
+  IMPAPI(CSurf_OnStop);
+  IMPAPI(CSurf_OnFwd);
+  IMPAPI(CSurf_OnRew);
+  IMPAPI(CSurf_OnRecord);
+  IMPAPI(CSurf_GoStart);
+  IMPAPI(CSurf_GoEnd);
+  IMPAPI(CSurf_OnArrow);
+  IMPAPI(CSurf_OnTrackSelection);
+  IMPAPI(CSurf_ResetAllCachedVolPanStates);
+  IMPAPI(CSurf_ScrubAmt);
+  IMPAPI(TrackList_UpdateAllExternalSurfaces);
+  IMPAPI(kbd_OnMidiEvent);
+  IMPAPI(GetMasterMuteSoloFlags);
+  IMPAPI(ClearAllRecArmed);
+  IMPAPI(SetTrackAutomationMode);
+  IMPAPI(GetTrackAutomationMode);
+  IMPAPI(SoloAllTracks);
+  IMPAPI(MuteAllTracks);
+  IMPAPI(BypassFxAllTracks);
+  IMPAPI(GetTrackInfo);
+  IMPAPI(SetTrackSelected);
+  IMPAPI(SetAutomationMode);
+  IMPAPI(UpdateTimeline);
+  IMPAPI(Main_UpdateLoopInfo);
+  IMPAPI(GetPlayState);
+  IMPAPI(GetPlayPosition);
+  IMPAPI(GetCursorPosition);
+  IMPAPI(format_timestr_pos);
+  IMPAPI(TimeMap2_timeToBeats);
+  IMPAPI(Track_GetPeakInfo);
+  IMPAPI(GetTrack);
+  IMPAPI(GetTrackUIVolPan);
+  IMPAPI(GetSetRepeat);
+  IMPAPI(mkvolpanstr);
+  IMPAPI(mkvolstr);
+  IMPAPI(mkpanstr);
+  IMPAPI(MoveEditCursor);
+  IMPAPI(adjustZoom);
+  IMPAPI(GetHZoomLevel);
+
+  IMPAPI(TrackFX_GetCount);
+  IMPAPI(TrackFX_GetNumParams);
+  IMPAPI(TrackFX_GetParam);
+  IMPAPI(TrackFX_SetParam);
+  IMPAPI(TrackFX_GetParamName);
+  IMPAPI(TrackFX_FormatParamValue);
+  IMPAPI(TrackFX_GetFXName);
+
+  IMPAPI(GetMediaItemInfo_Value);
   
-  IMPAPI(GetTrackGUID)
-
-  IMPAPI(ShowConsoleMsg)
+  IMPAPI(GetTrackGUID);
 
   void * (*get_config_var)(const char *name, int *szout); 
   int (*projectconfig_var_getoffs)(const char *name, int *szout);
@@ -236,17 +248,8 @@ REAPER_PLUGIN_DLL_EXPORT int REAPER_PLUGIN_ENTRYPOINT(REAPER_PLUGIN_HINSTANCE hI
 
   if (errcnt) return 0;
 
-/*
-  rec->Register("csurf",&csurf_bcf_reg);
-  rec->Register("csurf",&csurf_faderport_reg);
-  rec->Register("csurf",&csurf_hui_reg);
-  rec->Register("csurf",&csurf_mcu_reg);
-  rec->Register("csurf",&csurf_mcuex_reg);
-  rec->Register("csurf",&csurf_tranzport_reg);
-  rec->Register("csurf",&csurf_alphatrack_reg);
-  rec->Register("csurf",&csurf_01X_reg);
-*/
   rec->Register("csurf",&csurf_mf8_reg);
+  rec->Register("csurf",&csurf_launchcontrol_xl_reg);
 
   return 1;
 

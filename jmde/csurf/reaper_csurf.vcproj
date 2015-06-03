@@ -264,6 +264,10 @@
 				Name="csurfs"
 				>
 				<File
+					RelativePath=".\csurf_launchcontrol_xl.cpp"
+					>
+				</File>
+				<File
 					RelativePath=".\csurf_mf8.cpp"
 					>
 					<FileConfiguration
@@ -303,6 +307,10 @@
 			</File>
 			<File
 				RelativePath="..\reaper_plugin.h"
+				>
+			</File>
+			<File
+				RelativePath="..\reaper_plugin_functions.h"
 				>
 			</File>
 			<File

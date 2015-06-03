@@ -25,7 +25,8 @@ static void ShowConsoleMsgF(const char *fmt, ...)
 	char buffer [512];
 	va_list(ap);
 	va_start(ap, fmt);
-	vsprintf(buffer, fmt, ap);
+	strcpy(buffer, "MF8: ");
+	vsprintf(buffer+strlen(buffer), fmt, ap);
 	ShowConsoleMsg(buffer);
 }
 #else
@@ -471,13 +472,16 @@ class CSurf_MF8 : public IReaperControlSurface
         {
           if ( (m_cfg_flags&CONFIG_FLAG_FADER_TOUCH_MODE) && !GetTouchState(tr) ) {
             m_repos_faders = true;
+			ShowConsoleMsgF("OnFaderMove CONFIG_FLAG_FADER_TOUCH_MODE enabled, skipping\n");
           }
           else if (m_flipmode)
           {
+		    ShowConsoleMsgF("OnFaderMove invoking CSurf_SetSurfacePan(CSurf_OnPanChange(panlvl=%f))\n", panlvl);
             CSurf_SetSurfacePan(tr,CSurf_OnPanChange(tr,panlvl,false),NULL);
           }
           else 
 		  {
+		    ShowConsoleMsgF("OnFaderMove invoking CSurf_SetSurfaceVolume(CSurf_OnVolumeChange(vollvl=%f))\n", vollvl);
             CSurf_SetSurfaceVolume(tr,CSurf_OnVolumeChange(tr,vollvl,false),NULL);
 		  }
 		} else {
