@@ -76,7 +76,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib winmm.lib"
-				OutputFile="../Debug/Plugins/reaper_csurf_mf8.dll"
+				OutputFile="../Debug/Plugins/reaper_csurf_mf8_debug.dll"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
@@ -156,6 +156,7 @@
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="1"
+				DisableSpecificWarnings="4996"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -170,9 +171,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions="/mapinfo:lines"
 				AdditionalDependencies="odbc32.lib odbccp32.lib winmm.lib"
-				OutputFile="../Release/Plugins/reaper_csurf.dll"
+				OutputFile="../Release/Plugins/reaper_csurf_mf8.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\Release/reaper_csurf.pdb"
@@ -282,6 +282,14 @@
 							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
+				</File>
+				<File
+					RelativePath=".\TrackFromGUID.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\TrackFromGUID.h"
+					>
 				</File>
 			</Filter>
 		</Filter>

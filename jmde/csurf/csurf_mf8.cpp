@@ -10,9 +10,15 @@
 
 #include "csurf.h"
 #include "../../WDL/ptrlist.h"
+#include "TrackFromGUID.h"
 
-//#define _FLU_DEBUG
+#ifdef _DEBUG
+#define _FLU_DEBUG
+#endif
 
+#define _FLU_DEBUG_ONMIDIEVENT 0
+#define _FLU_DEBUG_ONFADERMOVE
+#define _FLU_DEBUG_SETSURFACEMUTE 0
 #ifdef _FLU_DEBUG
 static void ShowConsoleMsgF(const char *fmt, ...)
 {
@@ -238,36 +244,6 @@ struct ScheduledAction {
 
 #define DOUBLE_CLICK_INTERVAL 250 /* ms */
 
-class TrackIterator {
-  int m_index;
-  int m_len;
-public:
-  TrackIterator() {
-    m_index = 1;
-    m_len = CSurf_NumTracks(false);
-  }
-  MediaTrack* operator*() {
-    return CSurf_TrackFromID(m_index,false);
-  }
-  TrackIterator &operator++() {
-    if ( m_index <= m_len ) ++m_index;
-    return *this;
-  }
-  bool end() {
-    return m_index > m_len;
-  }
-};
-
-MediaTrack* TrackFromGUID( const GUID &guid ) {
-  for ( TrackIterator ti; !ti.end(); ++ti ) {
-    MediaTrack *tr = *ti;
-    const GUID *tguid=GetTrackGUID(tr);
-    
-    if (tr && tguid && !memcmp(tguid,&guid,sizeof(GUID)))
-      return tr;
-  }
-  return NULL;
-}
 
 struct SelectedTrack {
   SelectedTrack( MediaTrack *tr ) {
@@ -980,9 +956,8 @@ class CSurf_MF8 : public IReaperControlSurface
 	  if ( (evt->midi_message[0]&0xf0) != 0x90 )  
 	    return false;
 
-	  static const int nHandlers = 23;
-	  static const int nPressOnlyHandlers = 20;
-	  static const ButtonHandler handlers[nHandlers] = {
+#define ELEMENTSOF(v) (sizeof(v) / sizeof(v[0]))
+	  static const ButtonHandler handlers[] = {
 //          MF8:    MCU:
 // ARM      00 xx   00 xx
 // MUTE     08 xx   10 xx
@@ -1016,6 +991,7 @@ class CSurf_MF8 : public IReaperControlSurface
 	      { 0x60, 0x63, &CSurf_MF8::OnScroll },
 	      { 0x68, 0x70, &CSurf_MF8::OnTouch },
 	  };
+	  int nHandlers = ELEMENTSOF(handlers);
 
 	  unsigned int evt_code = evt->midi_message[1];  //get_midi_evt_code( evt );
 	  
@@ -1025,7 +1001,7 @@ class CSurf_MF8 : public IReaperControlSurface
 			evt->midi_message[1],
 			evt->midi_message[2]
 			);
-		
+
 	    // Check for double click
 	    DWORD now = timeGetTime();
 	    bool double_click = (int)evt_code == m_button_last && 
@@ -1034,15 +1010,17 @@ class CSurf_MF8 : public IReaperControlSurface
 	    m_button_last_time = now;
 
 	    // Find event handler
-	    for ( int i = 0; i < nPressOnlyHandlers; i++ ) { 
+	    for ( int i = 0; i < nHandlers; i++ ) { 
 	      ButtonHandler bh = handlers[i];
 	      if ( bh.evt_min <= evt_code && evt_code <= bh.evt_max ) {
+#if 0
 	        // Try double click first
 			  if ( double_click && bh.func_dc != NULL ) {
 				if ( (this->*bh.func_dc)(evt) ) {
 					ShowConsoleMsgF("OnButtonPress double click function returned TRUE\n");
 					return true; }
 			  }
+#endif
 
 	        // Single click (and unhandled double clicks)
 	        if ( bh.func != NULL )
@@ -1053,6 +1031,7 @@ class CSurf_MF8 : public IReaperControlSurface
 	    }
 	  }
 	  
+#if 0
 	  // For these events we want press and release
 	  for ( int i = nPressOnlyHandlers; i < nHandlers; i++ )
       if ( handlers[i].evt_min <= evt_code && evt_code <= handlers[i].evt_max )
@@ -1062,8 +1041,9 @@ class CSurf_MF8 : public IReaperControlSurface
 			  return true;
 		  }
 	  }
+#endif
 
-
+#if 0
 	  // Pass thru if not otherwise handled
 	  if ( evt->midi_message[2]>=0x40 ) {
 		ShowConsoleMsgF("OnButtonPress passing through event to kbd_OnMidiEvent\n");
@@ -1071,16 +1051,17 @@ class CSurf_MF8 : public IReaperControlSurface
 	    MIDI_event_t evt={0,3,{0xbf-(m_mackie_modifiers&15),a,0}};
 	    kbd_OnMidiEvent(&evt,-1);
 	  }
+#endif
 	  
 	  return true;
 	}
 
     void OnMIDIEvent(MIDI_event_t *evt)
     {
-        #if 0
+#if _FLU_DEBUG_ONMIDIEVENT >= 1
 		// logs a lot ... , hence disabled
         ShowConsoleMsgF("OnMIDIEvent message %02x, %02x, %02x\n",evt->midi_message[0],evt->midi_message[1],evt->midi_message[2]);
-        #endif
+#endif
 
         static const int nHandlers = 5;
         static const MidiHandlerFunc handlers[nHandlers] = {
@@ -1197,7 +1178,11 @@ public:
     const char *GetTypeString() { return m_is_mf8ex ? "MF8EX" : "MF8"; }
     const char *GetDescString()
     {
-      m_descspace.Set(m_is_mf8ex ? "Mackie Control Extended MF8" : "Samson Graphite MF8 based on MCU");
+#ifdef _FLU_DEBUG
+		m_descspace.Set(m_is_mf8ex ? "Samson Graphite MF8 MCE (debug)" : "Samson Graphite MF8 (debug)");
+#else
+		m_descspace.Set(m_is_mf8ex ? "Samson Graphite MF8 MCE" : "Samson Graphite MF8");
+#endif
       char tmp[512];
       sprintf(tmp," (dev %d,%d)",m_midi_in_dev,m_midi_out_dev);
       m_descspace.Append(tmp);
@@ -1577,7 +1562,9 @@ public:
 		  return;
 	    }
       }     
+#if _FLU_DEBUG_SETSURFACEMUTE >= 1
       ShowConsoleMsgF("SetSurfaceMute ignored\n");
+#endif
     }
 
     void SetSurfaceSelected(MediaTrack *trackid, bool selected) 
@@ -1949,15 +1936,25 @@ static HWND configFunc(const char *type_string, HWND parent, const char *initCon
 
 reaper_csurf_reg_t csurf_mf8_reg = 
 {
+#ifdef _FLU_DEBUG
+  "MF8_DEBUG",
+  "Samson Graphite MF8 (debug)",
+#else
   "MF8",
-  "Samson Graphite MF8 (MCU)",
+  "Samson Graphite MF8",
+#endif
   createFunc,
   configFunc,
 };
 reaper_csurf_reg_t csurf_mf8ex_reg = 
 {
+#ifdef _FLU_DEBUG
+  "MF8EX_DEBUG",
+  "Samson Graphite MF8 (MCE) (debug)",
+#else
   "MF8EX",
   "Samson Graphite MF8 (MCE)",
+#endif
   createFunc,
   configFunc,
 };

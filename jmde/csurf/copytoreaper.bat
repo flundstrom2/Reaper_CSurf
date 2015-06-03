@@ -44,6 +44,7 @@ goto retry
 
 :cont
 echo Copying...
-xcopy ..\Debug\Plugins\reaper_csurf_mf8.dll "C:\Program Files (x86)\REAPER\Plugins" /Y
+xcopy ..\Debug\Plugins\reaper_csurf_mf8_debug.dll "C:\Program Files (x86)\REAPER\Plugins" /Y
+xcopy ..\Release\Plugins\reaper_csurf_mf8.dll "C:\Program Files (x86)\REAPER\Plugins" /Y
 echo Starting REAPER...
 start /B startreaper.bat
