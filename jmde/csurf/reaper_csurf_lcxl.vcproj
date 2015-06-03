@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9,00"
-	Name="reaper_csurf_mf8"
-	ProjectGUID="{8FFD4B21-BD75-4A62-BD45-068FD44145E1}"
-	RootNamespace="reaper_csurf_mf8"
+	Name="reaper_csurf_lcxl"
+	ProjectGUID="{66E63BF6-E0E9-4385-BB6D-57B8435BB965}"
+	RootNamespace="reaper_csurf_lcxl"
 	TargetFrameworkVersion="0"
 	>
 	<Platforms>
@@ -76,7 +76,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib winmm.lib"
-				OutputFile="../Debug/Plugins/reaper_csurf_mf8_debug.dll"
+				OutputFile="../Debug/Plugins/reaper_csurf_lcxl_debug.dll"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
@@ -172,7 +172,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib winmm.lib"
-				OutputFile="../Release/Plugins/reaper_csurf_mf8.dll"
+				OutputFile="../Release/Plugins/reaper_csurf_lcxl.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\Release/reaper_csurf.pdb"
@@ -264,24 +264,8 @@
 				Name="csurfs"
 				>
 				<File
-					RelativePath=".\csurf_mf8.cpp"
+					RelativePath=".\csurf_launchcontrol_xl.cpp"
 					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath=".\TrackFromGUID.cpp"

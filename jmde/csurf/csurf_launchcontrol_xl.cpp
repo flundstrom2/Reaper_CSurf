@@ -2710,3 +2710,8 @@ reaper_csurf_reg_t csurf_launchcontrol_xl_reg =
   createFunc,
   configFunc,
 };
+
+int CSurf_Impl_Register(reaper_plugin_info_t *rec)
+{
+  return rec->Register("csurf",&csurf_launchcontrol_xl_reg);
+}

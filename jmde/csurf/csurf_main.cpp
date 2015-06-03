@@ -9,8 +9,7 @@
 
 #include "csurf.h"
 
-extern reaper_csurf_reg_t csurf_mf8_reg;
-extern reaper_csurf_reg_t csurf_launchcontrol_xl_reg;
+extern int CSurf_Impl_Register(reaper_plugin_info_t *);
 
 REAPER_PLUGIN_HINSTANCE g_hInst; // used for dialogs, if any
 HWND g_hwnd;
@@ -248,11 +247,9 @@ REAPER_PLUGIN_DLL_EXPORT int REAPER_PLUGIN_ENTRYPOINT(REAPER_PLUGIN_HINSTANCE hI
 
   if (errcnt) return 0;
 
-  rec->Register("csurf",&csurf_mf8_reg);
-  rec->Register("csurf",&csurf_launchcontrol_xl_reg);
+  
 
-  return 1;
-
+  return CSurf_Impl_Register(rec);
 }
 
 };

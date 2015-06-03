@@ -1962,3 +1962,8 @@ reaper_csurf_reg_t csurf_mf8ex_reg =
   createFunc,
   configFunc,
 };
+
+int CSurf_Impl_Register(reaper_plugin_info_t *rec)
+{
+  return rec->Register("csurf",&csurf_mf8_reg);
+}
