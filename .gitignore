@@ -7,3 +7,6 @@ Release
 /jmde/csurf/UpgradeLog.XML
 _UpgradeReport_Files
 /jmde/csurf/*.opensdf
+/jmde/csurf/x64/Debug/reaper_c*tlog
+/jmde/csurf/x64/Debug/*.log
+/jmde/csurf/x64/Debug/*.res
