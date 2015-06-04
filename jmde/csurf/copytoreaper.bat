@@ -27,7 +27,9 @@ if '%errorlevel%' NEQ '0' (
     CD /D "%~dp0"
 :--------------------------------------
 
-cd "C:\Users\Fredrik\Documents\Visual Studio 2008\Projects\reaper_extension_sdk\jmde\csurf"
+cd %HOMEDRIVE%
+cd "%HOMEPATH%"
+cd "Documents\Visual Studio 2013\Projects\reaper_extension_sdk\jmde\csurf"
 echo Shutting down REAPER (if it exist)...
 taskkill 2>&1 >NUL /IM reaper.exe
 set rc=%ERRORLEVEL%
@@ -44,9 +46,11 @@ goto retry
 
 :cont
 echo Copying...
-xcopy ..\Debug\Plugins\reaper_csurf_*_debug.dll "C:\Program Files (x86)\REAPER\Plugins" /Y
-xcopy ..\Release\Plugins\reaper_csurf_*.dll "C:\Program Files (x86)\REAPER\Plugins" /Y
-rem Must be compiled in x64 mode to be detected by REAPER (x64)!
-rem xcopy ..\Debug\Plugins\reaper_csurf_mf8.dll "C:\Program Files\REAPER (x64)\Plugins" /Y
+for %%d IN ( mf8 lcxl ) do (
+  xcopy ..\Release\Plugins\reaper_csurf_%%d.dll            "%REAPER_DIR%\Plugins" /Y
+  xcopy   ..\Debug\Plugins\reaper_csurf_%%d_debug.dll      "%REAPER_DIR%\Plugins" /Y
+  xcopy ..\Release\Plugins\reaper_csurf_%%d_x64.dll        "%REAPER64_DIR%\Plugins" /Y
+  xcopy   ..\Debug\Plugins\reaper_csurf_%%d_x64_debug.dll  "%REAPER64_DIR%\Plugins" /Y
+)
 echo Starting REAPER...
 start /B startreaper.bat
