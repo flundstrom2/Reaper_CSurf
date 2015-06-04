@@ -1,3 +1,3 @@
 @echo off
-"C:\Program Files (x86)\REAPER\reaper.exe"
+"%REAPER64_DIR%\reaper.exe"
 exit
