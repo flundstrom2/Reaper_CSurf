@@ -25,7 +25,7 @@ static void ShowConsoleMsgF(const char *fmt, ...)
 	char buffer [512];
 	va_list(ap);
 	va_start(ap, fmt);
-	strcpy(buffer, "MF8: ");
+	strcpy(buffer, "MF8" _FLU_ARCH_S ": ");
 	vsprintf(buffer+strlen(buffer), fmt, ap);
 	ShowConsoleMsg(buffer);
 }
@@ -719,7 +719,7 @@ class CSurf_MF8 : public IReaperControlSurface
 	  int tid=evt->midi_message[1];
 	  tid+=1+m_allmf8s_bank_offset+m_offset;
 	  MediaTrack *tr=CSurf_TrackFromID(tid,g_csurf_mcpmode);
-	  if (tr)
+	  if (tr && isTrackVisible(tid))
 	    CSurf_OnRecArmChange(tr,-1);
 	  return true;
 	}
@@ -735,7 +735,7 @@ class CSurf_MF8 : public IReaperControlSurface
 		  (ismute ? "MUTE" : "SOLO"));
 
 	  MediaTrack *tr=CSurf_TrackFromID(tidc,g_csurf_mcpmode);
-	  if (tr)
+	  if (tr && isTrackVisible(tid))
 	  {
 	    if (ismute)
 	      CSurf_SetSurfaceMute(tr,CSurf_OnMuteChange(tr,-1),NULL);
@@ -1183,9 +1183,9 @@ public:
     const char *GetDescString()
     {
 #ifdef _FLU_DEBUG
-		m_descspace.Set(m_is_mf8ex ? "Samson Graphite MF8 MCE (debug)" : "Samson Graphite MF8 (debug)");
+		m_descspace.Set(m_is_mf8ex ? "Samson Graphite MF8 MCE " _FLU_ARCH_S "(debug)" : "Samson Graphite MF8 " _FLU_ARCH_S "(debug)");
 #else
-		m_descspace.Set(m_is_mf8ex ? "Samson Graphite MF8 MCE" : "Samson Graphite MF8");
+		m_descspace.Set(m_is_mf8ex ? "Samson Graphite MF8 " _FLU_ARCH_S "MCE" : "Samson Graphite MF8" _FLU_ARCH_S "");
 #endif
       char tmp[512];
       sprintf(tmp," (dev %d,%d)",m_midi_in_dev,m_midi_out_dev);
@@ -1937,27 +1937,27 @@ static HWND configFunc(const char *type_string, HWND parent, const char *initCon
   return CreateDialogParam(g_hInst,MAKEINTRESOURCE(IDD_SURFACEEDIT_MF81),parent,dlgProc,(LPARAM)initConfigString);
 }
 
-
 reaper_csurf_reg_t csurf_mf8_reg = 
 {
 #ifdef _FLU_DEBUG
-  "MF8_DEBUG",
-  "Samson Graphite MF8 (debug)",
+	"MF8_DEBUG" _FLU_ARCH_S,
+	"Samson Graphite MF8 (debug) " _FLU_ARCH_S,
 #else
-  "MF8",
-  "Samson Graphite MF8",
+	"MF8" _FLU_ARCH_S "",
+  "Samson Graphite MF8 " _FLU_ARCH_S,
 #endif
   createFunc,
   configFunc,
 };
+
 reaper_csurf_reg_t csurf_mf8ex_reg = 
 {
 #ifdef _FLU_DEBUG
-  "MF8EX_DEBUG",
-  "Samson Graphite MF8 (MCE) (debug)",
+	"MF8EX_DEBUG" _FLU_ARCH_S,
+	"Samson Graphite MF8 (MCE) (debug) " _FLU_ARCH_S,
 #else
-  "MF8EX",
-  "Samson Graphite MF8 (MCE)",
+  "MF8EX" _FLU_ARCH_S "",
+  "Samson Graphite MF8 (MCE) " _FLU_ARCH_S,
 #endif
   createFunc,
   configFunc,

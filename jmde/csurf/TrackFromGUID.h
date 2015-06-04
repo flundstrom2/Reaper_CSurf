@@ -1,5 +1,10 @@
 #include "csurf.h"
 
+#ifdef _M_X64
+#define _FLU_ARCH_S "x64"
+#else
+#define _FLU_ARCH_S "x86"
+#endif
 
 class TrackIterator {
   int m_index;
@@ -22,3 +27,5 @@ public:
 };
 
 MediaTrack* TrackFromGUID( const GUID &guid );
+
+bool isTrackVisible(int id);

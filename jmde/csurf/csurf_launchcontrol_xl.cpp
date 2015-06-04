@@ -12,12 +12,6 @@
 #include "../../WDL/ptrlist.h"
 #include "TrackFromGUID.h"
 
-#ifdef _M_X64
-#define _FLU_ARCH_S "x64"
-#else
-#define _FLU_ARCH_S "x86"
-#endif
-
 #ifdef _DEBUG
 #define _FLU_DEBUG
 #endif
@@ -562,22 +556,6 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		poo.evt.midi_message[10]=0xF7;
 		Sleep(5);
 		m_midiout->SendMsg(&poo.evt,-1);
-	}
-
-	bool isTrackVisible(int id)
-	{
-		bool b_show = false;
-		if(GetMediaTrackInfo_Value != NULL) {
-			MediaTrack *tr = GetTrack(NULL, id);
-			if(tr) {
-				bool b_showintcp = (GetMediaTrackInfo_Value(tr, "B_SHOWINTCP") != 0.0 ? true : false);
-				bool b_showmixer = (GetMediaTrackInfo_Value(tr, "B_SHOWINMIXER") != 0.0 ? true : false);
-				if(b_showintcp || b_showmixer) {
-					b_show = true;
-				}
-			 }
-		}
-		return b_show;
 	}
 
 	// C: double GetMediaTrackInfo_Value(MediaTrack* tr, const char* parmname)
