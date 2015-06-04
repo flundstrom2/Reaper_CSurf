@@ -12,6 +12,12 @@
 #include "../../WDL/ptrlist.h"
 #include "TrackFromGUID.h"
 
+#ifdef _M_X64
+#define _FLU_ARCH_S "x64"
+#else
+#define _FLU_ARCH_S "x86"
+#endif
+
 #ifdef _DEBUG
 #define _FLU_DEBUG
 #endif
@@ -24,7 +30,7 @@ static void ShowConsoleMsgF(const char *fmt, ...)
 	char buffer [512];
 	va_list(ap);
 	va_start(ap, fmt);
-	strcpy(buffer, "LCXL: ");
+	strcpy(buffer, "LCXL" _FLU_ARCH_S ": ");
 	vsprintf(buffer+strlen(buffer), fmt, ap);
 	ShowConsoleMsg(buffer);
 }
@@ -1849,9 +1855,9 @@ public:
     const char *GetDescString()
     {
 #ifdef _FLU_DEBUG
-	  m_descspace.Set("Novation LaunchControl XL (Debug)");
+	  m_descspace.Set("Novation LaunchControl XL " _FLU_ARCH_S " (Debug)");
 #else
-	  m_descspace.Set("Novation LaunchControl XL");
+	  m_descspace.Set("Novation LaunchControl XL" _FLU_ARCH_S) ;
 #endif
       char tmp[512];
       sprintf(tmp," (dev %d,%d)",m_midi_in_dev,m_midi_out_dev);
@@ -2701,11 +2707,11 @@ static HWND configFunc(const char *type_string, HWND parent, const char *initCon
 reaper_csurf_reg_t csurf_launchcontrol_xl_reg = 
 {
 #ifdef _FLU_DEBUG
-  "LAUNCHCONTROL_XL_DEBUG",
-  "Novation LaunchControl XL (Debug)",
+  "LAUNCHCONTROL_XL_DEBUG" _FLU_ARCH_S,
+  "Novation LaunchControl XL (Debug) " _FLU_ARCH_S,
 #else
-  "LAUNCHCONTROL_XL",
-  "Novation LaunchControl XL",
+  "LAUNCHCONTROL_XL" _FLU_ARCH_S,
+  "Novation LaunchControl XL " _FLU_ARCH_S,
 #endif
   createFunc,
   configFunc,
