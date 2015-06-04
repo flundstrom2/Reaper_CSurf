@@ -51,12 +51,28 @@ const char *g_track_control_state_s[TRACKCONTROLSTATE_LAST] = {
 	"ARM"
 };
 
+/*
+							GREEN	RED
+off			0C	0000 1100	0		0
+
+red low		0D	0000 1101	0		1
+RED			0F	0000 1111	0		3
+amber low	1D	0001 1101	1		1
+AMBER		3F	0011 1111	3		3
+YELLOW		3E	0011 1110	3		2
+green low	1C	0001 1100	1		0
+GREEN		3C	0011 1100	3		0
+
+AMBER_R		2F	00010 1111	2		3
+*/
+
 typedef enum {
 	LED_COLOR_OFF = 0x0C,
 	LED_COLOR_RED_LOW = 0x0D,
 	LED_COLOR_RED_FULL = 0x0F,
 	LED_COLOR_RED_FULL_FLASH = ((LED_COLOR_RED_FULL & ~0x0C) | 0x08),
 	LED_COLOR_AMBER_LOW = 0x1D,
+	LED_COLOR_AMBER_R = 0x2F,
 	LED_COLOR_AMBER_FULL = 0x3F,
 	LED_COLOR_AMBER_FULL_FLASH = ((LED_COLOR_AMBER_FULL & ~0x0C) | 0x08),
 	LED_COLOR_YELLOW_FULL = 0x3E,
@@ -72,12 +88,15 @@ typedef enum {
 #define LED_COLOR_ARM    LED_COLOR_YELLOW_FULL
 #define LED_COLOR_DEVICE LED_COLOR_YELLOW_FULL
 
-#define LED_TRACK_CONTROL_MUTE_ON	LED_COLOR_AMBER_FULL
+#define LED_TRACK_CONTROL_MUTE_ON	LED_COLOR_AMBER_R
 #define LED_TRACK_CONTROL_MUTE_OFF	LED_COLOR_AMBER_LOW
 #define LED_TRACK_CONTROL_SOLO_ON	LED_COLOR_GREEN_FULL
 #define LED_TRACK_CONTROL_SOLO_OFF	LED_COLOR_GREEN_LOW
 #define LED_TRACK_CONTROL_ARM_ON	LED_COLOR_RED_FULL
 #define LED_TRACK_CONTROL_ARM_OFF	LED_COLOR_RED_LOW
+
+#define LED_TRACK_FOCUS_ON	LED_COLOR_YELLOW_FULL
+#define LED_TRACK_FOCUS_OFF	LED_COLOR_AMBER_LOW
 
 const char *g_led_names[] = {
 	"SEND_A_1",
@@ -596,12 +615,12 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 				  } else {
 					  LCXLSendSetLedColor(led, offcolor);
 				  }
-				  MediaTrack *tr = GetTrack(NULL, id+1);
+				  MediaTrack *tr = GetTrack(NULL, id);
 				  if (tr) {
 					  if (IsTrackSelected(tr)) {
-						  LCXLSendSetLedColor(led_focus, LED_COLOR_GREEN_FULL);
+						  LCXLSendSetLedColor(led_focus, LED_TRACK_FOCUS_ON);
 					  } else {
-						  LCXLSendSetLedColor(led_focus, LED_COLOR_GREEN_LOW);
+						  LCXLSendSetLedColor(led_focus, LED_TRACK_FOCUS_OFF);
 					  }
 				  }
 				  else {
@@ -2289,7 +2308,7 @@ public:
 		  led_e led = (led_e)(LED_TRACK_FOCUS_1 + tid);
 		  led_color_e color;
 		  if (isTrackVisible(tidc))
-			color = (selected ? LED_COLOR_GREEN_FULL : LED_COLOR_GREEN_LOW);
+			  color = (selected ? LED_TRACK_FOCUS_ON : LED_TRACK_FOCUS_OFF);
 		  else
 			color = LED_COLOR_OFF;
 		  LCXLSendSetLedColor(led, color);
