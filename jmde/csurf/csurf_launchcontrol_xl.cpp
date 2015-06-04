@@ -98,6 +98,8 @@ typedef enum {
 #define LED_TRACK_FOCUS_ON	LED_COLOR_YELLOW_FULL
 #define LED_TRACK_FOCUS_OFF	LED_COLOR_AMBER_LOW
 
+#define LED_PAN_ON			LED_COLOR_GREEN_FULL
+
 const char *g_led_names[] = {
 	"SEND_A_1",
 	"SEND_A_2",
@@ -596,7 +598,8 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 			  int tidc = id + 1;
 			  led_e led = (led_e)(LED_TRACK_CONTROL_1 + tid);
 			  led_e led_focus = (led_e)(LED_TRACK_FOCUS_1 + tid);
-		      if((m_track_control_state == m_track_control_state_only) || (m_track_control_state >= TRACKCONTROLSTATE_LAST))
+			  led_e led_pan = (led_e)(LED_PAN_1 + tid);
+			  if ((m_track_control_state == m_track_control_state_only) || (m_track_control_state >= TRACKCONTROLSTATE_LAST))
 					  ShowConsoleMsgF("setTrackControlStripColor: id=%d tid=%d tidc=%d led=%d (%s), state=%s\n",
 						  id, 
 						  tid,
@@ -615,6 +618,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 				  } else {
 					  LCXLSendSetLedColor(led, offcolor);
 				  }
+				  LCXLSendSetLedColor(led_pan, LED_PAN_ON);
 				  MediaTrack *tr = GetTrack(NULL, id);
 				  if (tr) {
 					  if (IsTrackSelected(tr)) {
@@ -630,6 +634,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 				  ShowConsoleMsgF("setTrackControlStripColor: Track id=%d not shown - HIDING\n", id);
 				  LCXLSendSetLedColor(led, LED_COLOR_OFF);
 				  LCXLSendSetLedColor(led_focus, LED_COLOR_OFF);
+				  LCXLSendSetLedColor(led_pan, LED_COLOR_OFF);
 			  }
 		  }
 		}
