@@ -94,10 +94,10 @@
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <PrecompiledHeaderOutputFile>.\Debug/reaper_csurf.pch</PrecompiledHeaderOutputFile>
-      <AssemblerListingLocation>.\Debug/</AssemblerListingLocation>
-      <ObjectFileName>.\Debug/</ObjectFileName>
-      <ProgramDataBaseFileName>.\Debug/</ProgramDataBaseFileName>
+      <PrecompiledHeaderOutputFile>.\Debug/$(TargetName)/$(TargetExt)/reaper_csurf.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\Debug/$(TargetName)/$(TargetExt)/</AssemblerListingLocation>
+      <ObjectFileName>.\Debug/$(TargetName)/$(TargetExt)/</ObjectFileName>
+      <ProgramDataBaseFileName>.\Debug/$(TargetName)/$(TargetExt)/</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
@@ -112,16 +112,16 @@
       <OutputFile>../Debug/Plugins/reaper_csurf_mf8_debug.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ProgramDatabaseFile>.\Debug/reaper_csurf.pdb</ProgramDatabaseFile>
+      <ProgramDatabaseFile>.\Debug/$(TargetName)/reaper_csurf.pdb</ProgramDatabaseFile>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <ImportLibrary>.\Debug/reaper_csurf.lib</ImportLibrary>
+      <ImportLibrary>.\Debug/$(TargetName)/reaper_csurf.lib</ImportLibrary>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <OutputFile>.\Debug/reaper_csurf.bsc</OutputFile>
+      <OutputFile>.\Debug/$(TargetName)/$(TargetExt)/reaper_csurf.bsc</OutputFile>
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -138,10 +138,10 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;REAPER_CSURF_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <PrecompiledHeaderOutputFile>.\Debug/reaper_csurf.pch</PrecompiledHeaderOutputFile>
-      <AssemblerListingLocation>.\Debug/</AssemblerListingLocation>
-      <ObjectFileName>.\Debug/</ObjectFileName>
-      <ProgramDataBaseFileName>.\Debug/</ProgramDataBaseFileName>
+      <PrecompiledHeaderOutputFile>.\Debug/$(TargetName)/$(TargetExt)/reaper_csurf.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\Debug/$(TargetName)/$(TargetExt)/</AssemblerListingLocation>
+      <ObjectFileName>.\Debug/$(TargetName)/$(TargetExt)/</ObjectFileName>
+      <ProgramDataBaseFileName>.\Debug/$(TargetName)/$(TargetExt)/</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -156,15 +156,15 @@
       <OutputFile>../Debug/Plugins/reaper_csurf_mf8_x64_debug.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ProgramDatabaseFile>.\Debug/reaper_csurf.pdb</ProgramDatabaseFile>
+      <ProgramDatabaseFile>.\Debug/$(TargetName)/reaper_csurf.pdb</ProgramDatabaseFile>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <ImportLibrary>.\Debug/reaper_csurf.lib</ImportLibrary>
+      <ImportLibrary>.\Debug/$(TargetName)/reaper_csurf.lib</ImportLibrary>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <OutputFile>.\Debug/reaper_csurf.bsc</OutputFile>
+      <OutputFile>.\Debug/$(TargetName)/$(TargetExt)/reaper_csurf.bsc</OutputFile>
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -184,10 +184,10 @@
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PrecompiledHeaderOutputFile>.\Release/reaper_csurf.pch</PrecompiledHeaderOutputFile>
-      <AssemblerListingLocation>.\Release/</AssemblerListingLocation>
-      <ObjectFileName>.\Release/</ObjectFileName>
-      <ProgramDataBaseFileName>.\Release/</ProgramDataBaseFileName>
+      <PrecompiledHeaderOutputFile>.\Release/$(TargetName)/$(TargetExt)/reaper_csurf.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\Release/$(TargetName)/$(TargetExt)/</AssemblerListingLocation>
+      <ObjectFileName>.\Release/$(TargetName)/$(TargetExt)/</ObjectFileName>
+      <ProgramDataBaseFileName>.\Release/$(TargetName)/$(TargetExt)/</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -201,18 +201,18 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>../Release/Plugins/reaper_csurf_mf8.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <ProgramDatabaseFile>.\Release/reaper_csurf.pdb</ProgramDatabaseFile>
+      <ProgramDatabaseFile>.\Release/$(TargetName)/$(TargetExt)/reaper_csurf.pdb</ProgramDatabaseFile>
       <GenerateMapFile>true</GenerateMapFile>
-      <MapFileName>.\Release/reaper_csurf.map</MapFileName>
+      <MapFileName>.\Release/$(TargetName)/$(TargetExt)/reaper_csurf.map</MapFileName>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <ImportLibrary>.\Release/reaper_csurf.lib</ImportLibrary>
+      <ImportLibrary>.\Release/$(TargetName)/$(TargetExt)/reaper_csurf.lib</ImportLibrary>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <OutputFile>.\Release/reaper_csurf.bsc</OutputFile>
+      <OutputFile>.\Release/$(TargetName)/$(TargetExt)/reaper_csurf.bsc</OutputFile>
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -231,10 +231,10 @@
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PrecompiledHeaderOutputFile>.\Release/reaper_csurf.pch</PrecompiledHeaderOutputFile>
-      <AssemblerListingLocation>.\Release/</AssemblerListingLocation>
-      <ObjectFileName>.\Release/</ObjectFileName>
-      <ProgramDataBaseFileName>.\Release/</ProgramDataBaseFileName>
+      <PrecompiledHeaderOutputFile>.\Release/$(TargetName)/$(TargetExt)/reaper_csurf.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\Release/$(TargetName)/$(TargetExt)/</AssemblerListingLocation>
+      <ObjectFileName>.\Release/$(TargetName)/$(TargetExt)/</ObjectFileName>
+      <ProgramDataBaseFileName>.\Release/$(TargetName)/$(TargetExt)/</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -248,17 +248,17 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>../Release/Plugins/reaper_csurf_mf8_x64.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <ProgramDatabaseFile>.\Release/reaper_csurf.pdb</ProgramDatabaseFile>
+      <ProgramDatabaseFile>.\Release/$(TargetName)/$(TargetExt)/reaper_csurf.pdb</ProgramDatabaseFile>
       <GenerateMapFile>true</GenerateMapFile>
-      <MapFileName>.\Release/reaper_csurf.map</MapFileName>
+      <MapFileName>.\Release/$(TargetName)/$(TargetExt)/reaper_csurf.map</MapFileName>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <ImportLibrary>.\Release/reaper_csurf.lib</ImportLibrary>
+      <ImportLibrary>.\Release/$(TargetName)/$(TargetExt)/reaper_csurf.lib</ImportLibrary>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <OutputFile>.\Release/reaper_csurf.bsc</OutputFile>
+      <OutputFile>.\Release/$(TargetName)/$(TargetExt)/reaper_csurf.bsc</OutputFile>
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
