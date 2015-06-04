@@ -21,11 +21,11 @@
 #ifdef _FLU_DEBUG
 static void ShowConsoleMsgF(const char *fmt, ...)
 {
-	char buffer [512];
+	char buffer[512];
 	va_list(ap);
 	va_start(ap, fmt);
 	strcpy(buffer, "LCXL" _FLU_ARCH_S ": ");
-	vsprintf(buffer+strlen(buffer), fmt, ap);
+	vsprintf(buffer + strlen(buffer), fmt, ap);
 	ShowConsoleMsg(buffer);
 }
 #else
@@ -396,7 +396,6 @@ static WDL_PtrList<CSurf_LaunchControl_XL> m_launchcontrol_xl_list;
 static bool g_csurf_mcpmode;
 static int m_flipmode;
 static int m_alllaunchcontrol_xls_bank_offset;
-static bool g_ignore_channelselect = true;
 static const double g_panadj = (1.0/4); // Used by LCXLOnRotaryEncoder
 static const double g_voladj = 11.0;// Used by LCXLOnRotaryEncoder
 
@@ -575,28 +574,43 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		for(int id = 0; id < 256; id++) {
 		  if(id >= min && id < max) {
 			  int tid = id - min;
+			  int tidc = id + 1;
 			  led_e led = (led_e)(LED_TRACK_CONTROL_1 + tid);
+			  led_e led_focus = (led_e)(LED_TRACK_FOCUS_1 + tid);
 		      if((m_track_control_state == m_track_control_state_only) || (m_track_control_state >= TRACKCONTROLSTATE_LAST))
-					  ShowConsoleMsgF("setTrackControlStripColor: id=%d tid=%d led=%d (%s), state=%s\n",
+					  ShowConsoleMsgF("setTrackControlStripColor: id=%d tid=%d tidc=%d led=%d (%s), state=%s\n",
 						  id, 
 						  tid,
+						  tidc,
 						  led,
 						  g_led_names[led],
 						  (states[id] ? "ON" : "off"));
 			  int numTracks = GetNumTracks();
-			  bool b_show = isTrackVisible(id);
+			  bool b_show = isTrackVisible(tidc);
 			  if(id >= numTracks) {
 				  b_show = false;
 			  }
 			  if (b_show) {
 				  if (states[id]) {
-					LCXLSendSetLedColor(led, oncolor);
+					  LCXLSendSetLedColor(led, oncolor);
 				  } else {
-					LCXLSendSetLedColor(led, offcolor);
+					  LCXLSendSetLedColor(led, offcolor);
+				  }
+				  MediaTrack *tr = GetTrack(NULL, id+1);
+				  if (tr) {
+					  if (IsTrackSelected(tr)) {
+						  LCXLSendSetLedColor(led_focus, LED_COLOR_GREEN_FULL);
+					  } else {
+						  LCXLSendSetLedColor(led_focus, LED_COLOR_GREEN_LOW);
+					  }
+				  }
+				  else {
+					  ShowConsoleMsgF("setTrackControlStripColor: INVALID id=%d\n", id);
 				  }
 			  } else {
 				  ShowConsoleMsgF("setTrackControlStripColor: Track id=%d not shown - HIDING\n", id);
 				  LCXLSendSetLedColor(led, LED_COLOR_OFF);
+				  LCXLSendSetLedColor(led_focus, LED_COLOR_OFF);
 			  }
 		  }
 		}
@@ -1232,12 +1246,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	}
 #endif
 	bool LCXLOnChannelSelectButton(button_event_e buttonevent, char bb, MIDI_event_t *evt ) {
-		if(g_ignore_channelselect) {
-		  ShowConsoleMsgF("LCXLOnChannelSelectButton: Ignoring...\n");
-		  return false;
-		}
-// TODO FIX!
-	  int tid=evt->midi_message[1]-0x18;
+	  int tid = buttonToTrackId(bb);
 	  int tidc = tid & 7;
 	  tidc+=1+m_alllaunchcontrol_xls_bank_offset+m_offset;
 	  ShowConsoleMsgF("LCXLOnChannelSelectButton tid=%d tidc=%d g_csurf_mcpmode=%s\n",
@@ -1247,8 +1256,13 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  );
 	  
 	  MediaTrack *tr=CSurf_TrackFromID(tidc,g_csurf_mcpmode);
-	  if (tr) CSurf_OnSelectedChange(tr,-1); // this will automatically update the surface
-	  else {
+	  if (tr) {
+		  if (isTrackVisible(tidc)) {
+			  CSurf_OnSelectedChange(tr, -1); // this will automatically update the surface
+		  } else {
+			  ShowConsoleMsgF("LCXLOnChannelSelectButton: HIDDEN track, ignoring...!\n");
+		  }
+	  } else {
 		  ShowConsoleMsgF("LCXLOnChannelSelectButton: INVALID track!\n");
 	  }
 	  return true;
@@ -2259,25 +2273,30 @@ public:
 	  }
     }
 
-#if 0
     void SetSurfaceSelected(MediaTrack *tr, bool selected) 
     { 
       if ( selected ) 
-        selectTrack(trackid);
+		  selectTrack(tr);
       else
-        deselectTrack(trackid);
+		  deselectTrack(tr);
       
       FIXID(id);
-      if (m_midiout && id>=0 && id < 256 && id < m_size)
-      {
-        if (id<8)
-          m_midiout->Send(0x90, 0x18+(id&7),selected?0x7f:0,-1);
-      }
-      UpdateAutoModes();
-    }
-#endif
+	  int min = m_offset + m_alllaunchcontrol_xls_bank_offset;
+	  int max = m_offset + m_alllaunchcontrol_xls_bank_offset + m_size - 1;
+	  if (id >= min && id < max) {
+		  int tid = id - min;
+		  int tidc = id + 1;
+		  led_e led = (led_e)(LED_TRACK_FOCUS_1 + tid);
+		  led_color_e color;
+		  if (isTrackVisible(tidc))
+			color = (selected ? LED_COLOR_GREEN_FULL : LED_COLOR_GREEN_LOW);
+		  else
+			color = LED_COLOR_OFF;
+		  LCXLSendSetLedColor(led, color);
+	  }
+
+	}
     
-#if 0
     void selectTrack( MediaTrack *tr ) {
 		// TODO: test and/or modify
       const GUID *guid = GetTrackGUID(tr);
@@ -2304,9 +2323,6 @@ public:
       // Append at end of list if not already selected
       i->next = new SelectedTrack(tr);
     }
-#endif
-
-#if 0
     
     void deselectTrack( MediaTrack *tr ) {
 		// TODO: test and/or modify
@@ -2337,7 +2353,6 @@ public:
         }
       }
     }
-#endif
     
     void SetSurfaceSolo(MediaTrack *tr, bool solo) 
     { 

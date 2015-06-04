@@ -28,4 +28,4 @@ public:
 
 MediaTrack* TrackFromGUID( const GUID &guid );
 
-bool isTrackVisible(int id);
+bool isTrackVisible(int tidc);
