@@ -33,6 +33,7 @@ static void ShowConsoleMsgF(const char *fmt, ...)
 #define ShowConsoleMsgF(...) do { } while (0)
 #endif
 
+#define ELEMENTSOF(v) (sizeof(v) / sizeof(v[0]))
 
 // Mute buttons			Amber
 // Solo buttons			Green
@@ -60,11 +61,13 @@ red low		0D	0000 1101	0		1
 RED			0F	0000 1111	0		3
 amber low	1D	0001 1101	1		1
 AMBER		3F	0011 1111	3		3
+yellow low	2D	0010 1101	2		1
 YELLOW		3E	0011 1110	3		2
 green low	1C	0001 1100	1		0
 GREEN		3C	0011 1100	3		0
 
-AMBER_R		2F	00010 1111	2		3
+orange low	1E	00001 1110	1		2
+ORANGE		2F	00010 1111	2		3
 */
 
 typedef enum {
@@ -72,10 +75,13 @@ typedef enum {
 	LED_COLOR_RED_LOW = 0x0D,
 	LED_COLOR_RED_FULL = 0x0F,
 	LED_COLOR_RED_FULL_FLASH = ((LED_COLOR_RED_FULL & ~0x0C) | 0x08),
+	LED_COLOR_ORANGE_LOW = 0x1E,
+	LED_COLOR_ORANGE_FULL = 0x2F,
+	LED_COLOR_ORANGE_FULL_FLASH = ((LED_COLOR_ORANGE_FULL & ~0x0C) | 0x08),
 	LED_COLOR_AMBER_LOW = 0x1D,
-	LED_COLOR_AMBER_R = 0x2F,
 	LED_COLOR_AMBER_FULL = 0x3F,
 	LED_COLOR_AMBER_FULL_FLASH = ((LED_COLOR_AMBER_FULL & ~0x0C) | 0x08),
+	LED_COLOR_YELLOW_LOW = 0x2D,
 	LED_COLOR_YELLOW_FULL = 0x3E,
 	LED_COLOR_YELLOW_FULL_FLASH = ((LED_COLOR_YELLOW_FULL & ~0x0C) | 0x08),
 	LED_COLOR_GREEN_LOW = 0x1C,
@@ -89,7 +95,7 @@ typedef enum {
 #define LED_COLOR_ARM    LED_COLOR_YELLOW_FULL
 #define LED_COLOR_DEVICE LED_COLOR_YELLOW_FULL
 
-#define LED_TRACK_CONTROL_MUTE_ON	LED_COLOR_AMBER_R
+#define LED_TRACK_CONTROL_MUTE_ON	LED_COLOR_ORANGE_FULL
 #define LED_TRACK_CONTROL_MUTE_OFF	LED_COLOR_AMBER_LOW
 #define LED_TRACK_CONTROL_SOLO_ON	LED_COLOR_GREEN_FULL
 #define LED_TRACK_CONTROL_SOLO_OFF	LED_COLOR_GREEN_LOW
@@ -103,6 +109,7 @@ typedef enum {
 
 #define LED_TRACK_SELECT_OFF	LED_COLOR_OFF
 #define LED_TRACK_SELECT_ON		LED_COLOR_RED_FULL
+
 
 const char *g_led_names[] = {
 	"SEND_A_1",
@@ -529,12 +536,17 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		static int bufferidx = 0;
 		switch (color) {
 			case LED_COLOR_OFF:					colors = "OFF"; break;
+
 			case LED_COLOR_RED_LOW:				colors = "red"; break;
 			case LED_COLOR_RED_FULL:			colors = "RED"; break;
 			case LED_COLOR_RED_FULL_FLASH:		colors = "RED [FLASH]"; break;
+			case LED_COLOR_ORANGE_LOW:			colors = "orange low"; break;
+			case LED_COLOR_ORANGE_FULL:			colors = "ORANGE"; break;
+			case LED_COLOR_ORANGE_FULL_FLASH:	colors = "ORANGE [FLASH]"; break;
 			case LED_COLOR_AMBER_LOW:			colors = "amber"; break;
 			case LED_COLOR_AMBER_FULL:			colors = "AMBER"; break;
 			case LED_COLOR_AMBER_FULL_FLASH:	colors = "AMBER [FLASH]"; break;
+			case LED_COLOR_YELLOW_LOW:			colors = "yellow low"; break;
 			case LED_COLOR_YELLOW_FULL:			colors = "YELLOW"; break;
 			case LED_COLOR_YELLOW_FULL_FLASH:	colors = "YELLOW [FLASH]"; break;
 			case LED_COLOR_GREEN_LOW:			colors = "green"; break;
@@ -1659,7 +1671,6 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	    if (button_event == BUTTON_EVENT_INVALID)  
 	      return false;
 
-#define ELEMENTSOF(v) (sizeof(v) / sizeof(v[0]))
 	    static const ButtonHandler handlers[] = {
 //	      { BUTTON_EVENT_NOTE_PRESSED, 0x4a, 0x4e, &CSurf_LaunchControl_XL::LCXLOnAutoMode,           NULL },
 	      { BUTTON_EVENT_CC_PRESSED,   0x6A, 0x6B, &CSurf_LaunchControl_XL::LCXLOnBankChannelButton,        NULL },
