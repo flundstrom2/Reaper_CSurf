@@ -29,7 +29,7 @@ if '%errorlevel%' NEQ '0' (
 
 cd %HOMEDRIVE%
 cd "%HOMEPATH%"
-cd "Documents\Visual Studio 2013\Projects\reaper_extension_sdk\jmde\csurf"
+cd "Documents\Visual Studio 2013\Projects\Reaper_Csurf\studioscrapnsound\csurf"
 echo Shutting down REAPER (if it exist)...
 taskkill 2>&1 >NUL /IM reaper.exe
 set rc=%ERRORLEVEL%
