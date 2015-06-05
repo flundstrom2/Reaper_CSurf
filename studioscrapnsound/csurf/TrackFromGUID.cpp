@@ -12,6 +12,9 @@
 #ifdef _DEBUG
 #define _FLU_DEBUG
 #endif
+
+#define _FLU_DEBUG_ISTRACKVISIBLE 0
+
 #ifdef _FLU_DEBUG
 static void ShowConsoleMsgF(const char *fmt, ...)
 {
@@ -43,7 +46,9 @@ bool isTrackVisible(int tidc)
 	bool b_show = false;
 	bool gotanAPI = false;
 	int id = tidc - 1;
+#if _FLU_DEBUG_ISTRACKVISIBLE > 0
 	ShowConsoleMsgF("isTrackVisible: id=%d tidc=%d\n", id, tidc);
+#endif
 	MediaTrack *tr = GetTrack(NULL, id);
 	if (tr == NULL) {
 		ShowConsoleMsgF("isTrackVisible: No track tidc=%d\n", tidc);
