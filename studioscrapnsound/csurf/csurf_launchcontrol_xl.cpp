@@ -16,8 +16,12 @@
 #ifdef _DEBUG
 #define _FLU_DEBUG
 #endif
+
 #define _FLU_DEBUG_ONMIDIEVENT 0
-#define _FLU_DEBUG_ONFADERMOVE
+#define _FLU_DEBUG_ONFADERMOVE 0
+#define _FLU_DEBUG_SENDSETLEDCOLOR 0
+#define _FLU_DEBUG_SETSENDLEDCOLORS 0
+#define _FLU_DEBUG_HAS_SEND 0
 
 #ifdef _FLU_DEBUG
 static void ShowConsoleMsgF(const char *fmt, ...)
@@ -328,6 +332,49 @@ const char *getButtonName(button_event_e buttonevent, char bb)
 	return "INVALID";
 }
 
+const led_color_e g_send_color[] = {
+	LED_COLOR_RED_FULL,
+	LED_COLOR_ORANGE_FULL,
+	LED_COLOR_GREEN_FULL,
+	LED_COLOR_AMBER_FULL,
+	LED_COLOR_YELLOW_FULL,
+
+	LED_COLOR_RED_LOW,
+	LED_COLOR_ORANGE_LOW,
+	LED_COLOR_GREEN_LOW,
+	LED_COLOR_AMBER_LOW,
+	LED_COLOR_YELLOW_LOW
+};
+
+#define NUM_SEND_COLORS ELEMENTSOF(g_send_color)
+
+bool hasSend(MediaTrack *tr, int send)
+{
+	int numSends = GetTrackNumSends(tr, 0); // Non-HW sends
+	int numHWSends = GetTrackNumSends(tr, 1); // HW sends
+#if _FLU_DEBUG_HAS_SEND > 0
+	FIXID(id)
+	ShowConsoleMsgF("hasSend id=%d numSends=%d numHWSends=%d\n", id, numSends, numHWSends);
+#endif
+
+	if (send < numSends + numHWSends) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+/*
+C: double CSurf_OnSendVolumeChange(MediaTrack* trackid, int send_index, double volume, bool relative)
+---
+C: bool SetTrackSendUIVol(MediaTrack* track, int send_idx, double vol, int isend)
+send_idx<0 for receives, isend = 1 for end of edit, -1 for an instant edit(such as reset), 0 for normal tweak.
+---
+C: bool GetTrackSendName(MediaTrack* track, int send_index, char* buf, int buf_sz)
+---
+C: bool GetTrackSendUIVolPan(MediaTrack* track, int send_index, double* volumeOut, double* panOut)
+---
+*/
 
 
 
@@ -526,13 +573,21 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
 	const char *getLedName(led_e led) 
 	{
-		return (led < LED_LAST ? g_led_names[led] : "INVALID LED #");
+		static char buffer[4][20];
+		static int bufferidx;
+		if (led < LED_LAST)
+			return g_led_names[led];
+		char *bufptr = &buffer[bufferidx][0];
+		sprintf(bufptr, "INVALID led 0x%02X", led);
+		bufferidx++;
+		bufferidx %= 4;
+		return bufptr;
 	}
 
 	const char *colorToString(char color)
 	{
 		const char *colors = NULL;
-		static char buffers[4][256];
+		static char buffers[8][40];
 		static int bufferidx = 0;
 		switch (color) {
 			case LED_COLOR_OFF:					colors = "OFF"; break;
@@ -552,23 +607,27 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 			case LED_COLOR_GREEN_LOW:			colors = "green"; break;
 			case LED_COLOR_GREEN_FULL:			colors = "GREEN"; break;
 			case LED_COLOR_GREEN_FULL_FLASH:	colors = "GREEN [FLASH]"; break;
-			default: colors = "CUSTOM";
-				break;
+			default:
+				sprintf(buffers[bufferidx], "CUSTOM color 0x%02X", color);
+				colors = buffers[bufferidx];
+				bufferidx++;
+				bufferidx %= 4;
 		}
-		sprintf(buffers[bufferidx], "color=0x%02X (%s)", color, colors);
+		sprintf(buffers[bufferidx], "%s", colors);
 		const char *buffer = buffers[bufferidx];
 		bufferidx ++;
-		bufferidx %= 4;
+		bufferidx %= 8;
 
 		return buffer;
 	}
 
 	void LCXLSendSetLedColor(led_e led, char color)
 	{
-		ShowConsoleMsgF("LCXLSendSetLedColor led=0x%2X (%s) %s\n",
-			led,
+#if _FLU_DEBUG_SENDSETLEDCOLOR > 0
+		ShowConsoleMsgF("LCXLSendSetLedColor %s %s\n",
 			getLedName(led),
 			colorToString(color));
+#endif
 
 		// Set LED color
 		struct
@@ -635,7 +694,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		int min =  m_offset+m_alllaunchcontrol_xls_bank_offset;
 		int max = m_offset+m_alllaunchcontrol_xls_bank_offset + m_size-1;
 		if((m_track_control_state == m_track_control_state_only) || (m_track_control_state >= TRACKCONTROLSTATE_LAST))
-			ShowConsoleMsgF("setTrackControlStripColor: min=%d max=%d on%s off%s\n",
+			ShowConsoleMsgF("setTrackControlStripColor: min=%d max=%d on=%s off=%s\n",
 					  min,
 					  max,
 					  colorToString(oncolor),
@@ -653,12 +712,11 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 			  led_e led_focus = (led_e)(LED_TRACK_FOCUS_1 + tid);
 			  led_e led_pan = (led_e)(LED_PAN_1 + tid);
 			  if ((m_track_control_state == m_track_control_state_only) || (m_track_control_state >= TRACKCONTROLSTATE_LAST))
-					  ShowConsoleMsgF("setTrackControlStripColor: id=%d tid=%d tidc=%d led=%d (%s), state=%s\n",
+					  ShowConsoleMsgF("setTrackControlStripColor: id=%d tid=%d tidc=%d %s=%s\n",
 						  id, 
 						  tid,
 						  tidc,
-						  led,
-						  g_led_names[led],
+						  getLedName(led),
 						  (states[id] ? "ON" : "off"));
 			  int numTracks = GetNumTracks();
 			  bool b_show = isTrackVisible(tidc);
@@ -684,7 +742,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 					  ShowConsoleMsgF("setTrackControlStripColor: INVALID id=%d\n", id);
 				  }
 			  } else {
-				  ShowConsoleMsgF("setTrackControlStripColor: Track id=%d not shown - HIDING\n", id);
+				  ShowConsoleMsgF("setTrackControlStripColor: tidc=%d not shown - HIDING\n", tidc);
 				  LCXLSendSetLedColor(led, LED_COLOR_OFF);
 				  LCXLSendSetLedColor(led_focus, LED_COLOR_OFF);
 				  LCXLSendSetLedColor(led_pan, LED_COLOR_OFF);
@@ -695,12 +753,16 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
 	void setTrackControlState(TrackControlState_e track_control_state)
 	{
-		ShowConsoleMsgF("setTrackControlState: track_control_state=%d (%s) m_device_mode=%s\n",
-			track_control_state,
-			g_track_control_state_s[track_control_state],
+		ShowConsoleMsgF("setTrackControlState: %s m_device_mode=%s\n",
+			(track_control_state < ELEMENTSOF(g_track_control_state_s) ? 
+				g_track_control_state_s[track_control_state] :
+				"INVALID state"
+			),
 			m_device_mode ? "DEVICE" : "OFF"
 			);
 		m_track_control_state = track_control_state;
+
+		setSendLedColors();
 
 		if (m_midiout)
 		{
@@ -945,7 +1007,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
 	  if (volume_fader_move || pan_fader_move) // volume fader move
       {
-#ifdef _FLU_DEBUG_ONFADERMOVE
+#if _FLU_DEBUG_ONFADERMOVE > 0 
 	  ShowConsoleMsgF("LCXLOnFaderMove %s tid=%u (tidc=%u) %s=%f\n", 
 		  (volume_fader_move ? "VOLUME" : "PAN   "),
 		  tid,
@@ -965,7 +1027,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
         {
           if ( (m_cfg_flags&CONFIG_FLAG_FADER_TOUCH_MODE) && !GetTouchState(tr) ) {
             m_repos_faders = true;
-#ifdef _FLU_DEBUG_ONFADERMOVE
+#if _FLU_DEBUG_ONFADERMOVE > 0
 			ShowConsoleMsgF("LCXLOnFaderMove CONFIG_FLAG_FADER_TOUCH_MODE enabled, skipping\n");
 #endif
           }
@@ -984,7 +1046,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		}
         return true;
 	  } else {
-#ifdef _FLU_DEBUG_ONFADERMOVE
+#if _FLU_DEBUG_ONFADERMOVE > 0
 	    ShowConsoleMsgF("LCXLOnFaderMove %s tid=%u (tidc=%u) lvl=%f (CURRENTLY IGNORED)\n", 
 		  (volume_fader_move ? "SEND A" : "SEND B"),
 		  tid,
@@ -1310,6 +1372,77 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  return true;
 	}
 #endif
+
+	int m_send_offset = 0;
+	int m_num_sends = 2;
+
+	bool LCXLOnDeviceButton(button_event_e buttonevent, char bb, MIDI_event_t *evt) {
+		return true;
+	}
+
+	void setSendLedColors(void)
+	{
+		int numTracks = GetNumTracks();
+		int min = m_offset + m_alllaunchcontrol_xls_bank_offset;
+		int max = m_offset + m_alllaunchcontrol_xls_bank_offset + m_size - 1;
+		ShowConsoleMsgF("setSendLedColors min=%d max=%d g_csurf_mcpmode=%s\n",
+			min,
+			max,
+			g_csurf_mcpmode ? "TRUE" : "false");
+			
+		for (int tidc = 1; tidc <= max; tidc++) {
+#if _FLU_DEBUG_SETSENDLEDCOLORS > 0
+			ShowConsoleMsgF("setSendLedColors tidc=%d/%d\n",
+				tidc,
+				numTracks,
+				g_csurf_mcpmode ? "TRUE" : "false"
+				);
+#endif
+			if (tidc >= min+1 && tidc <= max) {
+				int tid = tidc - min-1;
+				MediaTrack *tr = CSurf_TrackFromID(tidc, g_csurf_mcpmode);
+				if (tidc <= numTracks) {
+					if (tr) {
+						for (int row = 0; row < m_num_sends; row++)  {
+							led_color_e color = LED_COLOR_OFF;
+							led_e led = (led_e)(row * 8 + tid);
+							if (isTrackVisible(tidc)) {
+								int sendidx = m_send_offset + row;
+								bool has_send = hasSend(tr, sendidx);
+								if (has_send) {
+									if (sendidx < NUM_SEND_COLORS) {
+										color = g_send_color[sendidx];
+									}
+									else {
+										color = LED_COLOR_RED_FULL;
+									}
+									ShowConsoleMsgF("setSendLedColors: tidc=%d %s %s\n", 
+										tidc,
+										getLedName(led),
+										colorToString(color)
+										);
+								}
+							}
+							else {
+								if (row == 0) {
+									// Just one log entry per track
+									ShowConsoleMsgF("setSendLedColors tidc=%d not shown - HIDING\n", tidc);
+								}
+							}
+							LCXLSendSetLedColor(led, color);
+						}
+					} else {
+						ShowConsoleMsgF("setSendLedColors tidc=%d INVALID track!\n", tidc);
+					}
+				} else {
+					for (int row = 0; row < m_num_sends; row++)  {
+						led_e led = (led_e)(row * 8 + tid);
+						LCXLSendSetLedColor(led, LED_COLOR_OFF);
+					}
+				}
+			}
+		}
+	}
 
 #if 0
 	bool LCXLOnSoloButtonDC( MIDI_event_t *evt ) {
@@ -1674,7 +1807,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	    static const ButtonHandler handlers[] = {
 //	      { BUTTON_EVENT_NOTE_PRESSED, 0x4a, 0x4e, &CSurf_LaunchControl_XL::LCXLOnAutoMode,           NULL },
 	      { BUTTON_EVENT_CC_PRESSED,   0x6A, 0x6B, &CSurf_LaunchControl_XL::LCXLOnBankChannelButton,        NULL },
-//	      { BUTTON_EVENT_NOTE_PRESSED, 0x35, 0x35, &CSurf_LaunchControl_XL::LCXLOnSMPTEBeats,         NULL },
+		  { (button_event_e)(BUTTON_EVENT_NOTE_PRESSED | BUTTON_EVENT_NOTE_RELEASED),
+									   0x69, 0x69, &CSurf_LaunchControl_XL::LCXLOnDeviceButton, NULL },
+//		  { BUTTON_EVENT_NOTE_PRESSED, 0x35, 0x35, &CSurf_LaunchControl_XL::LCXLOnSMPTEBeats,         NULL },
 //        { BUTTON_EVENT_NOTE_PRESSED, 0x20, 0x27, &CSurf_LaunchControl_XL::LCXLOnRotaryEncoderPush,  NULL },
 //        { BUTTON_EVENT_NOTE_PRESSED, 0x00, 0x07, &CSurf_LaunchControl_XL::LCXLOnRecArmButton,             NULL },
 //        { BUTTON_EVENT_NOTE_PRESSED, 0x08, 0x0f, NULL,                                          &CSurf_LaunchControl_XL::LCXLOnSoloButtonDC },
@@ -1771,7 +1906,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
     void LCXLOnMIDIEvent(MIDI_event_t *evt)
     {
-        #if _FLU_DEBUG_ONMIDIEVENT >= 1
+#if _FLU_DEBUG_ONMIDIEVENT >= 1
 		// logs a lot ... , hence disabled
 		char therest[256];
 		therest[0] = '\0';

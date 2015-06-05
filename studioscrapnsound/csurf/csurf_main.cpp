@@ -228,6 +228,7 @@ REAPER_PLUGIN_DLL_EXPORT int REAPER_PLUGIN_ENTRYPOINT(REAPER_PLUGIN_HINSTANCE hI
   IMPAPI(IsTrackSelected);
   
   IMPAPI(GetTrackGUID);
+  IMPAPI(GetTrackNumSends);
 
   void * (*get_config_var)(const char *name, int *szout); 
   int (*projectconfig_var_getoffs)(const char *name, int *szout);
