@@ -1,0 +1,28 @@
+Author: Fredrik Lundström, Studio Scrap 'N' Sound
+e-mail: fredrik.lundstrom.1974@gmail.com
+Copyright (C) 2006-2009 Cockos Incorporated
+Copyright (C) 2015 Fredrik Lundström
+License: LGPL.
+
+Some control surface drivers for REAPER DAW, based on the MCU driver in the
+REAPER Plugin SDK December 16 2009.
+
+Drivers included:
+* Samson Graphite MF-8
+* Novation LaunchControl XL (probably works with Novation LaunchControl as well)
+
+NOTE: This is work-in-progress, and I offer no support.
+
+KNOWN BUGS:
+* LaunchControl implementation is non-complete; Device, Send Select, Send A/B
+  are not implemented. Track Select LEDs are not implemented.
+
+TESTING:
+I've compiled these using Visual Studio 2013 Community Edition. Initially,
+I converted the project from Visual Studio 6, to Visual Studio 2008, and
+tested the 32-bit .DLLs against REAPER 4.78 x86. Then I converted the project
+to Visual Studio 2013, and compiled x64, for testing with REAPER 4.78 x64.
+
+My test setup is Windows 8.1 x64.
+
+No further testing has been done on the 32-bit DLLs.
