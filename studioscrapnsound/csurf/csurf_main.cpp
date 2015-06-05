@@ -1,9 +1,11 @@
 /*
 ** reaper_csurf
-** Copyright (C) 2006-2008 Cockos Incorporated
+** Author: Fredrik Lundström, Studio Scrap 'N' Sound
+** e-mail: fredrik.lundstrom.1974@gmail.com
+** Copyright (C) 2006-2009 Cockos Incorporated
+** Copyright (C) 2015 Fredrik Lundström
 ** License: LGPL.
 */
-
 
 #define REAPERAPI_IMPLEMENT
 
