@@ -101,6 +101,9 @@ typedef enum {
 
 #define LED_PAN_ON			LED_COLOR_GREEN_FULL
 
+#define LED_TRACK_SELECT_OFF	LED_COLOR_OFF
+#define LED_TRACK_SELECT_ON		LED_COLOR_RED_FULL
+
 const char *g_led_names[] = {
 	"SEND_A_1",
 	"SEND_A_2",
@@ -579,6 +582,39 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		m_midiout->SendMsg(&poo.evt,-1);
 	}
 
+	void setTrackSelectColor(void)
+	{
+		int min = m_offset + m_alllaunchcontrol_xls_bank_offset;
+		int max = m_offset + m_alllaunchcontrol_xls_bank_offset + m_size - 1;
+		ShowConsoleMsgF("setTrackSelectColor: min=%d max=%d\n",
+			min,
+			max);
+		int numTracks = GetNumTracks();
+		bool hasVisible = false;
+		for (int tidc = 1; tidc < min; tidc++) {
+			if (isTrackVisible(tidc)) {
+				LCXLSendSetLedColor(LED_TRACK_SELECT_LEFT, LED_TRACK_SELECT_ON);
+				hasVisible = true;
+				break;
+			}
+		}
+		if (!hasVisible) {
+			LCXLSendSetLedColor(LED_TRACK_SELECT_LEFT, LED_TRACK_SELECT_OFF);
+		}
+
+		hasVisible = false;
+		for (int tidc = max+1; tidc <= numTracks; tidc++) {
+			if (isTrackVisible(tidc)) {
+				LCXLSendSetLedColor(LED_TRACK_SELECT_RIGHT, LED_TRACK_SELECT_ON);
+				hasVisible = true;
+				break;
+			}
+		}
+		if (!hasVisible) {
+			LCXLSendSetLedColor(LED_TRACK_SELECT_RIGHT, LED_TRACK_SELECT_OFF);
+		}
+	}
+
 	// C: double GetMediaTrackInfo_Value(MediaTrack* tr, const char* parmname)
 	// bool * B_SHOWINTCP : show track panel in tcp -- do not use on master
 	//MediaTrack* GetTrack(ReaProject* proj, int trackidx)
@@ -592,7 +628,11 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 					  max,
 					  colorToString(oncolor),
 					  colorToString(offcolor)
-			);
+					  );
+
+		setTrackSelectColor();
+
+
 		for(int id = 0; id < 256; id++) {
 		  if(id >= min && id < max) {
 			  int tid = id - min;
@@ -2278,6 +2318,7 @@ public:
     }
 #endif
 
+
     void SetSurfaceMute(MediaTrack *tr, bool mute) 
     {
       FIXID(id);
@@ -2304,7 +2345,8 @@ public:
 		  selectTrack(tr);
       else
 		  deselectTrack(tr);
-      
+
+#if 0
       FIXID(id);
 	  int min = m_offset + m_alllaunchcontrol_xls_bank_offset;
 	  int max = m_offset + m_alllaunchcontrol_xls_bank_offset + m_size - 1;
@@ -2319,6 +2361,9 @@ public:
 			color = LED_COLOR_OFF;
 		  LCXLSendSetLedColor(led, color);
 	  }
+#endif
+
+	  setTrackControlState(m_track_control_state);
 
 	}
     
