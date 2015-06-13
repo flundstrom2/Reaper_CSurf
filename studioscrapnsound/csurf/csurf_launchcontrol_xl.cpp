@@ -739,7 +739,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 					  led_color_e led_color_off;
 					  if (!m_device_mode) {
 						  led_color_on = LED_TRACK_FOCUS_ON;
-						  led_color_off = LED_TRACK_FOCUS_ON;
+						  led_color_off = LED_TRACK_FOCUS_OFF;
 					  }
 					  if (IsTrackSelected(tr)) {
 						  LCXLSendSetLedColor(led_focus, led_color_on);
