@@ -519,6 +519,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	TrackControlState_e m_track_control_state;
 	TrackControlState_e m_track_control_state_only;
 	bool m_device_mode;
+	char m_current_template;
 
 	double m_pan_lastchanges[256];
     int m_vol_lastpos[256];
@@ -703,12 +704,13 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
 		setTrackSelectColor();
 
+		int numTracks = GetNumTracks();
 
-		for(int id = 0; id < 256; id++) {
+		for (int id = 0; id < numTracks+8; id++) {
 		  if(id >= min && id < max) {
 			  int tid = id - min;
 			  int tidc = id + 1;
-			  led_e led = (led_e)(LED_TRACK_CONTROL_1 + tid);
+			  led_e led_control = (led_e)(LED_TRACK_CONTROL_1 + tid);
 			  led_e led_focus = (led_e)(LED_TRACK_FOCUS_1 + tid);
 			  led_e led_pan = (led_e)(LED_PAN_1 + tid);
 			  if ((m_track_control_state == m_track_control_state_only) || (m_track_control_state >= TRACKCONTROLSTATE_LAST))
@@ -716,26 +718,33 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 						  id, 
 						  tid,
 						  tidc,
-						  getLedName(led),
+						  getLedName(led_control),
 						  (states[id] ? "ON" : "off"));
-			  int numTracks = GetNumTracks();
 			  bool b_show = isTrackVisible(tidc);
 			  if(id >= numTracks) {
 				  b_show = false;
 			  }
 			  if (b_show) {
 				  if (states[id]) {
-					  LCXLSendSetLedColor(led, oncolor);
+					  LCXLSendSetLedColor(led_control, oncolor);
 				  } else {
-					  LCXLSendSetLedColor(led, offcolor);
+					  LCXLSendSetLedColor(led_control, offcolor);
 				  }
-				  LCXLSendSetLedColor(led_pan, LED_PAN_ON);
+				  if (!m_device_mode) {
+					  LCXLSendSetLedColor(led_pan, LED_PAN_ON);
+				  }
 				  MediaTrack *tr = GetTrack(NULL, id);
 				  if (tr) {
+					  led_color_e led_color_on;
+					  led_color_e led_color_off;
+					  if (!m_device_mode) {
+						  led_color_on = LED_TRACK_FOCUS_ON;
+						  led_color_off = LED_TRACK_FOCUS_ON;
+					  }
 					  if (IsTrackSelected(tr)) {
-						  LCXLSendSetLedColor(led_focus, LED_TRACK_FOCUS_ON);
+						  LCXLSendSetLedColor(led_focus, led_color_on);
 					  } else {
-						  LCXLSendSetLedColor(led_focus, LED_TRACK_FOCUS_OFF);
+						  LCXLSendSetLedColor(led_focus, led_color_off);
 					  }
 				  }
 				  else {
@@ -743,9 +752,11 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 				  }
 			  } else {
 				  ShowConsoleMsgF("setTrackControlStripColor: tidc=%d not shown - HIDING\n", tidc);
-				  LCXLSendSetLedColor(led, LED_COLOR_OFF);
+				  LCXLSendSetLedColor(led_control, LED_COLOR_OFF);
 				  LCXLSendSetLedColor(led_focus, LED_COLOR_OFF);
-				  LCXLSendSetLedColor(led_pan, LED_COLOR_OFF);
+				  if (!m_device_mode) {
+					  LCXLSendSetLedColor(led_pan, LED_COLOR_OFF);
+				  }
 			  }
 		  }
 		}
@@ -815,6 +826,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
       memset(m_pan_lastpos,0xff,sizeof(m_pan_lastpos));
 
 	  m_device_mode = false;
+	  m_current_template = 0;
 	  m_track_control_state = TRACKCONTROLSTATE_MUTE;
 	  m_track_control_state_only = TRACKCONTROLSTATE_MUTE; // 
 
@@ -959,14 +971,23 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
     
     bool LCXLOnTemplateChange(MIDI_event_t *evt) {
       const unsigned char onResetMsg[]={0xf0,0x00,0x20,0x29,0x02,0x11,0x77};
-      if (evt->midi_message[7] != 0x08 && evt->midi_message[8]==0xf7 && evt->size == sizeof(onResetMsg)+2 && !memcmp(evt->midi_message,onResetMsg,sizeof(onResetMsg)))
+      if (evt->midi_message[8]==0xf7 && evt->size == sizeof(onResetMsg)+2 && !memcmp(evt->midi_message,onResetMsg,sizeof(onResetMsg)))
       {
-        // on reset
-		ShowConsoleMsgF("LCXLOnTemplateChange executing - template change from Factory Template 1 not allowed!\n");
-        LCXLReset();
-		setTrackControlState(m_track_control_state);
-        TrackList_UpdateAllExternalSurfaces();
-        return true;
+		  if (evt->midi_message[7] != 0x08) {
+			  // on reset
+			  if (!m_device_mode) {
+				  ShowConsoleMsgF("LCXLOnTemplateChange executing - template change from Factory Template 1 not allowed!\n");
+				  LCXLReset();
+			  }
+			  else {
+				  ShowConsoleMsgF("LCXLOnTemplateChange executing - In device mode; allowing template change\n");
+			  }
+		  } else {
+			  setTrackControlState(m_track_control_state);
+			  TrackList_UpdateAllExternalSurfaces();
+			  m_current_template = evt->midi_message[7];
+		  }
+  		  return true;
       }
       return false;
     }
@@ -1377,6 +1398,10 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	int m_num_sends = 2;
 
 	bool LCXLOnDeviceButton(button_event_e buttonevent, char bb, MIDI_event_t *evt) {
+		if (buttonevent == BUTTON_EVENT_NOTE_PRESSED) {
+			m_device_mode = !m_device_mode;
+			setTrackControlState(m_track_control_state);
+		}
 		return true;
 	}
 
@@ -1406,30 +1431,34 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 						for (int row = 0; row < m_num_sends; row++)  {
 							led_color_e color = LED_COLOR_OFF;
 							led_e led = (led_e)(row * 8 + tid);
-							if (isTrackVisible(tidc)) {
-								int sendidx = m_send_offset + row;
-								bool has_send = hasSend(tr, sendidx);
-								if (has_send) {
-									if (sendidx < NUM_SEND_COLORS) {
-										color = g_send_color[sendidx];
+							if (!m_device_mode) {
+								if (isTrackVisible(tidc)) {
+									int sendidx = m_send_offset + row;
+									bool has_send = hasSend(tr, sendidx);
+									if (has_send) {
+										if (sendidx < NUM_SEND_COLORS) {
+											color = g_send_color[sendidx];
+										}
+										else {
+											color = LED_COLOR_RED_FULL;
+										}
+										ShowConsoleMsgF("setSendLedColors: tidc=%d %s %s\n",
+											tidc,
+											getLedName(led),
+											colorToString(color)
+											);
 									}
-									else {
-										color = LED_COLOR_RED_FULL;
+								}
+								else {
+									if (row == 0) {
+										// Just one log entry per track
+										ShowConsoleMsgF("setSendLedColors tidc=%d not shown - HIDING\n", tidc);
 									}
-									ShowConsoleMsgF("setSendLedColors: tidc=%d %s %s\n", 
-										tidc,
-										getLedName(led),
-										colorToString(color)
-										);
 								}
+								LCXLSendSetLedColor(led, color);
+							} else {
+								// TODO: Device mode
 							}
-							else {
-								if (row == 0) {
-									// Just one log entry per track
-									ShowConsoleMsgF("setSendLedColors tidc=%d not shown - HIDING\n", tidc);
-								}
-							}
-							LCXLSendSetLedColor(led, color);
 						}
 					} else {
 						ShowConsoleMsgF("setSendLedColors tidc=%d INVALID track!\n", tidc);
@@ -1437,7 +1466,11 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 				} else {
 					for (int row = 0; row < m_num_sends; row++)  {
 						led_e led = (led_e)(row * 8 + tid);
-						LCXLSendSetLedColor(led, LED_COLOR_OFF);
+						if (!m_device_mode) {
+							LCXLSendSetLedColor(led, LED_COLOR_OFF);
+						} else {
+							// TODO: Device mode
+						}
 					}
 				}
 			}
