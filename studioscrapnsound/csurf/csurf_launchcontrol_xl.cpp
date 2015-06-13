@@ -2361,17 +2361,17 @@ static WDL_DLGRET dlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         int parms[5];
         parseParms((const char *)lParam,parms);
 
-        int n=GetNumMIDIInputs();
-        int x=SendDlgItemMessage(hwndDlg,IDC_COMBO2,CB_ADDSTRING,0,(LPARAM)"None");
+        LRESULT n=GetNumMIDIInputs();
+        LRESULT x=SendDlgItemMessage(hwndDlg,IDC_COMBO2,CB_ADDSTRING,0,(LPARAM)"None");
         SendDlgItemMessage(hwndDlg,IDC_COMBO2,CB_SETITEMDATA,x,-1);
         x=SendDlgItemMessage(hwndDlg,IDC_COMBO3,CB_ADDSTRING,0,(LPARAM)"None");
         SendDlgItemMessage(hwndDlg,IDC_COMBO3,CB_SETITEMDATA,x,-1);
         for (x = 0; x < n; x ++)
         {
           char buf[512];
-          if (GetMIDIInputName(x,buf,sizeof(buf)))
+          if (GetMIDIInputName((int)x,buf,sizeof(buf)))
           {
-            int a=SendDlgItemMessage(hwndDlg,IDC_COMBO2,CB_ADDSTRING,0,(LPARAM)buf);
+            LRESULT a=SendDlgItemMessage(hwndDlg,IDC_COMBO2,CB_ADDSTRING,0,(LPARAM)buf);
             SendDlgItemMessage(hwndDlg,IDC_COMBO2,CB_SETITEMDATA,a,x);
             if (x == parms[2]) SendDlgItemMessage(hwndDlg,IDC_COMBO2,CB_SETCURSEL,a,0);
           }
@@ -2380,9 +2380,9 @@ static WDL_DLGRET dlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         for (x = 0; x < n; x ++)
         {
           char buf[512];
-          if (GetMIDIOutputName(x,buf,sizeof(buf)))
+          if (GetMIDIOutputName((int)x,buf,sizeof(buf)))
           {
-            int a=SendDlgItemMessage(hwndDlg,IDC_COMBO3,CB_ADDSTRING,0,(LPARAM)buf);
+            LRESULT a=SendDlgItemMessage(hwndDlg,IDC_COMBO3,CB_ADDSTRING,0,(LPARAM)buf);
             SendDlgItemMessage(hwndDlg,IDC_COMBO3,CB_SETITEMDATA,a,x);
             if (x == parms[3]) SendDlgItemMessage(hwndDlg,IDC_COMBO3,CB_SETCURSEL,a,0);
           }
@@ -2400,8 +2400,8 @@ static WDL_DLGRET dlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
       {
         char tmp[512];
 
-        int indev=-1, outdev=-1, offs=0, size=9;
-        int r=SendDlgItemMessage(hwndDlg,IDC_COMBO2,CB_GETCURSEL,0,0);
+        LRESULT indev=-1, outdev=-1, offs=0, size=9;
+        LRESULT r=SendDlgItemMessage(hwndDlg,IDC_COMBO2,CB_GETCURSEL,0,0);
         if (r != CB_ERR) indev = SendDlgItemMessage(hwndDlg,IDC_COMBO2,CB_GETITEMDATA,r,0);
         r=SendDlgItemMessage(hwndDlg,IDC_COMBO3,CB_GETCURSEL,0,0);
         if (r != CB_ERR)  outdev = SendDlgItemMessage(hwndDlg,IDC_COMBO3,CB_GETITEMDATA,r,0);
@@ -2423,7 +2423,7 @@ static WDL_DLGRET dlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
           cflags|=CONFIG_FLAG_MAPF1F8TOMARKERS;
 
         sprintf(tmp,"%d %d %d %d %d",offs,size,indev,outdev,cflags);
-        lstrcpyn((char *)lParam, tmp,wParam);
+        lstrcpyn((char *)lParam, tmp,(int)wParam);
         
       }
     break;
