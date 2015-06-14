@@ -109,6 +109,9 @@ typedef enum {
 #define LED_TRACK_FOCUS_ON	LED_COLOR_YELLOW_FULL
 #define LED_TRACK_FOCUS_OFF	LED_COLOR_AMBER_LOW
 
+#define LED_TRACK_FOCUS_DEVICE_ON	LED_COLOR_RED_FULL
+#define LED_TRACK_FOCUS_DEVICE_OFF	LED_COLOR_RED_LOW
+
 #define LED_PAN_ON			LED_COLOR_GREEN_FULL
 
 #define LED_TRACK_SELECT_OFF	LED_COLOR_OFF
@@ -737,11 +740,18 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 				  if (tr) {
 					  led_color_e led_color_on;
 					  led_color_e led_color_off;
+					  bool show_selected;
 					  if (!m_device_mode) {
 						  led_color_on = LED_TRACK_FOCUS_ON;
 						  led_color_off = LED_TRACK_FOCUS_OFF;
+						  show_selected = IsTrackSelected(tr);
 					  }
-					  if (IsTrackSelected(tr)) {
+					  else {
+						  led_color_on = LED_TRACK_FOCUS_DEVICE_ON;
+						  led_color_off = LED_TRACK_FOCUS_DEVICE_OFF;
+						  show_selected = (tid == m_current_template) ? true : false;
+					  }
+					  if (show_selected) {
 						  LCXLSendSetLedColor(led_focus, led_color_on);
 					  } else {
 						  LCXLSendSetLedColor(led_focus, led_color_off);
@@ -753,9 +763,19 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 			  } else {
 				  ShowConsoleMsgF("setTrackControlStripColor: tidc=%d not shown - HIDING\n", tidc);
 				  LCXLSendSetLedColor(led_control, LED_COLOR_OFF);
-				  LCXLSendSetLedColor(led_focus, LED_COLOR_OFF);
 				  if (!m_device_mode) {
+					  LCXLSendSetLedColor(led_focus, LED_COLOR_OFF);
 					  LCXLSendSetLedColor(led_pan, LED_COLOR_OFF);
+				  } else {
+					  led_color_e led_color_on = LED_TRACK_FOCUS_DEVICE_ON;
+					  led_color_e led_color_off = LED_TRACK_FOCUS_DEVICE_OFF;
+					  bool show_selected = (tid == m_current_template) ? true : false;
+					  if (show_selected) {
+						  LCXLSendSetLedColor(led_focus, led_color_on);
+					  }
+					  else {
+						  LCXLSendSetLedColor(led_focus, led_color_off);
+					  }
 				  }
 			  }
 		  }
@@ -808,6 +828,34 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		}
 	}
 
+	void resetTemplate(void)
+	{
+		// Reset templates (LCXLOnly factory templates, keep user templates)
+		for (int tidx = 8; tidx < 16; tidx++) {
+			m_midiout->Send(0xB0 + tidx, 0x00, 0x00, -1);
+		}
+
+		// Select template
+		struct
+		{
+			MIDI_event_t evt;
+			char data[9];
+		}
+		poo;
+		poo.evt.frame_offset = 0;
+		poo.evt.size = 9;
+		poo.evt.midi_message[0] = 0xF0;
+		poo.evt.midi_message[1] = 0x00;
+		poo.evt.midi_message[2] = 0x20;
+		poo.evt.midi_message[3] = 0x29;
+		poo.evt.midi_message[4] = 0x02;
+		poo.evt.midi_message[5] = 0x11;
+		poo.evt.midi_message[6] = 0x77;
+		poo.evt.midi_message[7] = 0x08; // Factory Template 1.
+		poo.evt.midi_message[8] = 0xF7;
+		Sleep(5);
+		m_midiout->SendMsg(&poo.evt, -1);
+	}
     
     void LCXLReset()
     {
@@ -832,31 +880,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 
       if (m_midiout)
       {
-		// Reset templates (LCXLOnly factory templates, keep user templates)
-		for (int tidx = 8; tidx < 16; tidx++) {
-		  m_midiout->Send(0xB0 + tidx, 0x00, 0x00, -1); 
-		}
-
-		// Select template
-		struct
-		{
-		  MIDI_event_t evt;
-		  char data[9];
-		}
-		poo;
-		poo.evt.frame_offset=0;
-		poo.evt.size=9;
-		poo.evt.midi_message[0]=0xF0;
-		poo.evt.midi_message[1]=0x00;
-		poo.evt.midi_message[2]=0x20;
-		poo.evt.midi_message[3]=0x29;
-		poo.evt.midi_message[4]=0x02;
-		poo.evt.midi_message[5]=0x11;
-		poo.evt.midi_message[6]=0x77;
-		poo.evt.midi_message[7]=0x08; // Factory Template 1.
-		poo.evt.midi_message[8]=0xF7;
-		Sleep(5);
-		m_midiout->SendMsg(&poo.evt,-1);
+		resetTemplate();
 
 		setTrackControlState(TRACKCONTROLSTATE_ARM);
 #if 0
@@ -933,9 +957,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 				  ShowConsoleMsgF("LCXLOnTemplateChange executing - In device mode; allowing template change\n");
 			  }
 		  } else {
+			  m_current_template = evt->midi_message[7];
 			  setTrackControlState(m_track_control_state);
 			  TrackList_UpdateAllExternalSurfaces();
-			  m_current_template = evt->midi_message[7];
 		  }
   		  return true;
       }
@@ -976,7 +1000,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
       if (tid == 8) tidc=0; // master offset, master=0
       else tidc = tid + 1+m_offset+m_alllaunchcontrol_xls_bank_offset;
 
-	  if (volume_fader_move || pan_fader_move) // volume fader move
+	  if (!m_device_mode && (volume_fader_move || pan_fader_move)) // volume fader move
       {
 #if _FLU_DEBUG_ONFADERMOVE > 0 
 	  ShowConsoleMsgF("LCXLOnFaderMove %s tid=%u (tidc=%u) %s=%f\n", 
@@ -1017,19 +1041,23 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 		}
         return true;
 	  } else {
+		  // TODO: bool SetTrackSendUIVol(MediaTrack* track, int send_idx, double vol, int isend)
 #if _FLU_DEBUG_ONFADERMOVE > 0
 	    ShowConsoleMsgF("LCXLOnFaderMove %s tid=%u (tidc=%u) lvl=%f (CURRENTLY IGNORED)\n", 
-		  (volume_fader_move ? "SEND A" : "SEND B"),
-		  tid,
+			(senda_fader_move ? "SEND A" :
+			(sendb_fader_move ? "SEND B" :
+			(volume_fader_move ? "VOLUME" :
+			(pan_fader_move ? "PAN" : "UNKNOWN")))),
+			tid,
 		  tidc,
 		  panlvl
 		  );
 #endif
-		return true; // Simply ignore so far...
+		return false; // Simply ignore so far...
 	  }
-	  ShowConsoleMsgF("LCXLOnFaderMove ignored\n"); 
 
-      return false;
+	  ShowConsoleMsgF("LCXLOnFaderMove ignored\n");
+	  return false;
     }
 
 	bool LCXLOnRotaryEncoder( MIDI_event_t *evt ) {
@@ -1043,7 +1071,7 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	  else {
 		ShowConsoleMsgF("LCXLOnRotaryEncoder non-pan invoked\n");
 	  }
-	  if (pan) {
+	  if (!m_device_mode && pan) {
 	    int tid=evt->midi_message[1]-0x10;
 		int tidc = tid;
 
@@ -1109,6 +1137,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 			);
 		}
 	    return true;
+	  } else {
+	  ShowConsoleMsgF("LCXLOnRotaryEncoder ignored\n"); 
+		  return false;
 	  }
 	  ShowConsoleMsgF("LCXLOnRotaryEncoder ignored\n"); 
 
@@ -1235,6 +1266,9 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 	bool LCXLOnDeviceButton(button_event_e buttonevent, char bb, MIDI_event_t *evt) {
 		if (buttonevent == BUTTON_EVENT_NOTE_PRESSED) {
 			m_device_mode = !m_device_mode;
+			if (!m_device_mode) {
+				resetTemplate();
+			}
 			setTrackControlState(m_track_control_state);
 		}
 		return true;
@@ -1594,6 +1628,10 @@ class CSurf_LaunchControl_XL : public IReaperControlSurface
 #endif
 				return;
 			}
+		}
+
+		if (m_device_mode) {
+			kbd_OnMidiEvent(evt, 0);
 		}
     }
 
